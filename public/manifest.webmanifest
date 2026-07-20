@@ -1,0 +1,33 @@
+{
+  "name": "PriceDesk",
+  "short_name": "PriceDesk",
+  "description": "Smarter tech. Sharper minds. Enterprise pricing approval workflow.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1E1B4B",
+  "theme_color": "#7C3AED",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    }
+  ]
+}
