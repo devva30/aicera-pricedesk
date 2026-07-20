@@ -9,6 +9,7 @@ export const ALL_ROLES: UserRole[] = [
   'technical',
   'finance',
   'sales_head',
+  'ops',
   'admin',
 ]
 
@@ -30,5 +31,6 @@ export const ROLE_SIGNUP_HINTS: Record<UserRole, string> = {
   finance: 'Review margin and financial viability',
   technical: 'Review solution scope and technical feasibility',
   sales_head: 'Final approval on strategic deals',
+  ops: 'Manage order operations, delivery, and fulfilment',
   admin: 'Full access, user management, and settings',
 }

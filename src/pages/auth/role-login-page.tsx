@@ -192,15 +192,15 @@ export function RoleLoginPage({ role }: RoleLoginPageProps) {
       const res = await login(data.email, data.password, role)
       if (res && res.redirectWarning) {
         toast.dismiss(toastId)
-        toast.warning(res.redirectWarning, { duration: 6000 })
+        toast.warning(res.redirectWarning, { duration: 1500 })
       } else {
-        toast.success(`Access granted! Entered as ${config.title}`, { id: toastId })
+        toast.success(`Access granted! Entered as ${config.title}`, { id: toastId, duration: 1500 })
       }
       navigate('/dashboard')
     } catch (err: any) {
       const msg = err.message || 'Authentication failed'
       setError(msg)
-      toast.error(msg, { id: toastId })
+      toast.error(msg, { id: toastId, duration: 1500 })
     } finally {
       setLoading(false)
     }

@@ -28,7 +28,7 @@ import { useAuthStore } from '@/stores/auth-store'
 
 const schema = z.object({
   email: z.string().email('Valid work email required'),
-  role: z.enum(['sales_rep', 'finance', 'technical', 'sales_head', 'admin']),
+  role: z.enum(['sales_rep', 'finance', 'technical', 'sales_head', 'ops', 'admin']),
   department: z.string().optional(),
 })
 

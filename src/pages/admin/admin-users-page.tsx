@@ -15,6 +15,7 @@ import { CreateUserDialog } from '@/components/admin/create-user-dialog'
 import { buildInviteUrl, fetchInvites, revokeInvite } from '@/services/invite-service'
 import { fetchUsers, deleteUser, updateUserRole } from '@/services/users-service'
 import { ROLE_LABELS, type Invite, type User, type Customer } from '@/types'
+import { ALL_ROLES } from '@/lib/auth-roles'
 import { cn, formatRelative } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import {
@@ -157,11 +158,9 @@ export function AdminUsersPage() {
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="sales_rep">Sales Rep</SelectItem>
-                <SelectItem value="technical">Technical Queue</SelectItem>
-                <SelectItem value="finance">Finance Queue</SelectItem>
-                <SelectItem value="sales_head">Sales Head</SelectItem>
-                <SelectItem value="admin">Administrator</SelectItem>
+                {ALL_ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

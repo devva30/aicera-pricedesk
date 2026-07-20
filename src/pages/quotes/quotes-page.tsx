@@ -80,16 +80,23 @@ function QuoteStat({ title, value, sub, icon: Icon, iconBg, valueColor, loading 
   if (loading) {
     return <div className="bg-card border border-border rounded-xl p-5 shadow-sm animate-pulse h-28" />
   }
+  const strVal = String(value)
+  const len = strVal.length
+  let sizeClass = 'text-xl sm:text-2xl'
+  if (len > 12) sizeClass = 'text-xs sm:text-sm md:text-xl'
+  else if (len > 9) sizeClass = 'text-sm sm:text-base md:text-xl'
+  else if (len > 6) sizeClass = 'text-base sm:text-xl md:text-2xl'
+
   return (
-    <div className="bg-card border border-border rounded-xl p-5 shadow-sm premium-card hover:shadow-md transition-all">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+    <div className="bg-card border border-border rounded-xl p-3.5 sm:p-5 shadow-sm premium-card hover:shadow-md transition-all overflow-hidden">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 pr-1">
           <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-tight truncate">{title}</p>
-          <p className={`text-2xl font-extrabold font-display tracking-tight mt-2 ${valueColor ?? 'text-foreground'}`}>{value}</p>
+          <p className={`font-extrabold font-display tracking-tight mt-1.5 break-words ${sizeClass} ${valueColor ?? 'text-foreground'}`}>{value}</p>
           {sub && <p className="text-[10px] text-muted-foreground mt-1 truncate">{sub}</p>}
         </div>
-        <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 shadow-sm border border-border/40 ${iconBg}`}>
-          <Icon className="h-5 w-5" />
+        <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center shrink-0 shadow-sm border border-border/40 ${iconBg}`}>
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
         </div>
       </div>
     </div>
@@ -129,7 +136,7 @@ export function QuotesPage() {
     if (!quoteToDelete) return
     setIsDeleting(true)
     try {
-      await deleteQuote(quoteToDelete.id)
+      await deleteQuote(quoteToDelete.id, user?.id)
       setQuotes((prev) => prev.filter((q) => q.id !== quoteToDelete.id))
       toast.success(`Quote ${quoteToDelete.deal_number || quoteToDelete.title} deleted successfully`)
       setQuoteToDelete(null)

@@ -62,7 +62,7 @@ export function AcceptInvitePage() {
     setSubmitting(true)
     try {
       await acceptInviteSignup(cleanToken, preview!.email, data.password, data.fullName)
-      toast.success(`Welcome to PriceDesk — ${ROLE_LABELS[preview!.role]}`)
+      toast.success(`Welcome to PriceDesk — ${ROLE_LABELS[preview!.role]}`, { duration: 1500 })
       navigate('/dashboard')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not accept invite')

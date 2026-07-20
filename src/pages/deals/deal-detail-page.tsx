@@ -51,11 +51,11 @@ export function DealDetailPage() {
     setIsDeleting(true)
     try {
       if (isQuoteView) {
-        await deleteQuote(deal.id)
+        await deleteQuote(deal.id, user.id)
         toast.success(`Quote ${deal.deal_number || deal.title} deleted successfully`)
         navigate('/quotes')
       } else {
-        await deleteDeal(deal.id)
+        await deleteDeal(deal.id, user.id)
         dispatch(removeDeal(deal.id))
         toast.success(`Deal ${deal.deal_number || deal.title} deleted successfully`)
         navigate('/deals')
@@ -176,8 +176,15 @@ export function DealDetailPage() {
       URL.revokeObjectURL(url)
       toast.success('PDF downloaded successfully!', { id: toastId })
     } catch (err: any) {
-      console.error(err)
-      toast.error(`Failed to generate PDF: ${err.message || err}`, { id: toastId })
+      console.error('PDF Generation Error:', err)
+      const errMsg = String(err?.message || err)
+      if (errMsg.includes('WebAssembly') || errMsg.includes('unsafe-eval') || errMsg.includes('CompileError')) {
+        toast.dismiss(toastId)
+        toast.info('Mobile browser blocked PDF engine. Opening print/PDF layout...', { duration: 3000 })
+        window.print()
+      } else {
+        toast.error(`Failed to generate PDF: ${errMsg}`, { id: toastId })
+      }
     }
   }
 
@@ -375,13 +382,11 @@ export function DealDetailPage() {
               <span className="hidden sm:inline">Export CSV</span>
             </Button>
 
-            {/* Download PDF button (Quotes only) */}
-            {isQuoteView && (
-              <Button size="sm" onClick={handleDownloadPDF} className="text-xs h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm ring-1 ring-indigo-600/20">
-                <FileDown className="h-3.5 w-3.5" />
-                <span>Download PDF</span>
-              </Button>
-            )}
+            {/* Download PDF button */}
+            <Button size="sm" onClick={handleDownloadPDF} className="text-xs h-8 gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm">
+              <FileDown className="h-3.5 w-3.5" />
+              <span>Download PDF</span>
+            </Button>
 
             {/* Print button */}
             <Button variant="outline" size="sm" onClick={handlePrintPDF} className="text-xs h-8 gap-1">
@@ -389,11 +394,13 @@ export function DealDetailPage() {
               <span className="hidden sm:inline">Print</span>
             </Button>
 
-            {/* Delete button */}
-            <Button variant="outline" size="sm" onClick={() => setShowDeleteModal(true)} className="text-xs h-8 gap-1 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20">
-              <Trash2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Delete {isQuoteView ? 'Quote' : 'Deal'}</span>
-            </Button>
+            {/* Delete button – sales_rep and admin only */}
+            {(user.role === 'sales_rep' || user.role === 'admin') && (
+              <Button variant="outline" size="sm" onClick={() => setShowDeleteModal(true)} className="text-xs h-8 gap-1 text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20">
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Delete {isQuoteView ? 'Quote' : 'Deal'}</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -481,7 +488,15 @@ export function DealDetailPage() {
       {!isQuoteView && (
         <Card className="shadow-sm border-border bg-card print:hidden">
           <CardContent className="p-3">
-            <PipelineTracker currentStatus={deal.status} requiresTechnical={deal.requires_technical} />
+            <PipelineTracker
+              currentStatus={deal.status}
+              requiresTechnical={deal.requires_technical}
+              isQuoteOnly={deal.is_quote_only ?? false}
+              belowFloorMargin={
+                (deal.is_quote_only ?? false) &&
+                (deal.gross_margin_pct ?? 0) / 100 < (settings?.floor_margin_pct ?? 0.06)
+              }
+            />
           </CardContent>
         </Card>
       )}

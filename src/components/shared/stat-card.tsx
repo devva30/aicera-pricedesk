@@ -17,10 +17,10 @@ interface StatCardProps {
 
 function getValueSizeClass(value: string): string {
   const len = value.length
-  if (len > 16) return 'text-base leading-snug'
-  if (len > 12) return 'text-lg leading-snug'
-  if (len > 9) return 'text-xl leading-tight'
-  return 'text-2xl leading-tight'
+  if (len > 14) return 'text-xs sm:text-sm md:text-base leading-snug'
+  if (len > 10) return 'text-sm sm:text-base md:text-lg leading-snug'
+  if (len > 7) return 'text-base sm:text-lg md:text-xl leading-tight'
+  return 'text-xl sm:text-2xl leading-tight'
 }
 
 export function StatCard({

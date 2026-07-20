@@ -152,7 +152,7 @@ export function OrderDetailPage() {
     if (!order) return
     setIsDeletingOrder(true)
     try {
-      await deleteOrder(order.id)
+      await deleteOrder(order.id, user?.id)
       toast.success(`Order ${order.order_number || order.title} deleted successfully`)
       navigate('/orders')
     } catch (e: any) {

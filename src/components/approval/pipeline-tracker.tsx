@@ -6,23 +6,53 @@ import { type DealStatus } from '@/types'
 interface PipelineTrackerProps {
   currentStatus: DealStatus
   requiresTechnical: boolean
+  isQuoteOnly?: boolean
+  belowFloorMargin?: boolean
   compact?: boolean
 }
 
-const STAGE_CONFIG: { status: DealStatus; label: string; optional?: boolean }[] = [
+const ALL_STAGES: { status: DealStatus; label: string }[] = [
   { status: 'draft', label: 'Draft' },
-  { status: 'pending_technical', label: 'Tech Review', optional: true },
+  { status: 'pending_technical', label: 'Tech Review' },
   { status: 'pending_finance', label: 'Finance Review' },
   { status: 'pending_sales_head', label: 'Sales Head' },
   { status: 'approved', label: 'Approved' },
 ]
 
+function buildStages(
+  requiresTechnical: boolean,
+  isQuoteOnly: boolean,
+  belowFloorMargin: boolean
+): { status: DealStatus; label: string }[] {
+  // Quote above floor margin: auto-approved, show only Draft → Approved
+  if (isQuoteOnly && !belowFloorMargin) {
+    return [
+      { status: 'draft', label: 'Draft' },
+      { status: 'approved', label: 'Approved' },
+    ]
+  }
+  // Quote below floor margin: goes directly to Sales Head, skip Finance & Technical
+  if (isQuoteOnly && belowFloorMargin) {
+    return [
+      { status: 'draft', label: 'Draft' },
+      { status: 'pending_sales_head', label: 'Sales Head' },
+      { status: 'approved', label: 'Approved' },
+    ]
+  }
+  // Normal deal: full pipeline, optionally with Technical
+  return ALL_STAGES.filter(
+    (s) => s.status !== 'pending_technical' || requiresTechnical
+  )
+}
+
 export function PipelineTracker({
   currentStatus,
   requiresTechnical,
+  isQuoteOnly = false,
+  belowFloorMargin = false,
   compact = false,
 }: PipelineTrackerProps) {
-  const stages = STAGE_CONFIG.filter((s) => !s.optional || requiresTechnical)
+  const stages = buildStages(requiresTechnical, isQuoteOnly, belowFloorMargin)
   const isRejected = currentStatus === 'rejected'
   const isChanges = currentStatus === 'changes_requested'
 

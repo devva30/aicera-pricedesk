@@ -46,10 +46,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 md:h-16 items-center justify-between border-b border-border/50 bg-background/80 backdrop-blur-xl px-3 md:px-6 gap-3">
+    <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] md:h-16 md:pt-0 items-center justify-between border-b border-border/50 bg-background/80 backdrop-blur-xl px-3 md:px-6 gap-2">
 
       {/* Left: Hamburger menu toggle button (3-line options button) */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <Button
           variant="ghost"
           size="icon"
@@ -61,13 +61,13 @@ export function Header({ onMenuToggle }: HeaderProps) {
         </Button>
 
         {/* PriceDesk logo - mobile only since sidebar brand is hidden on mobile */}
-        <div className="flex items-center gap-1.5 lg:hidden">
+        <div className="flex items-center gap-1.5 lg:hidden min-w-0">
           <img
             src="https://framerusercontent.com/images/AlNvsxkJzF8SFWwwytH2xsnL8uM.png"
             alt="PriceDesk Logo"
             className="h-6 w-6 rounded-md object-contain shrink-0"
           />
-          <h1 className="text-sm font-bold aicera-gradient-text">PriceDesk</h1>
+          <h1 className="text-sm font-bold aicera-gradient-text truncate">PriceDesk</h1>
         </div>
       </div>
 

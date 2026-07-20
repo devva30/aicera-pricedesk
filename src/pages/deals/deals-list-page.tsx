@@ -66,7 +66,7 @@ export function DealsListPage() {
           <Button variant="outline" size="icon" onClick={loadData} title="Refresh list" className="h-9 w-9">
             <RefreshCw className="h-4 w-4" />
           </Button>
-          {user.role === 'sales_rep' && (
+          {(user.role === 'sales_rep' || user.role === 'admin') && (
             <Button onClick={() => navigate('/deals/new')} size="sm" className="h-9 text-xs font-semibold px-4">
               <Plus className="h-4 w-4 mr-1.5" />
               New Deal

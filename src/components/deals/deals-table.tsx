@@ -27,6 +27,7 @@ import { EmptyState } from '@/components/shared/empty-state'
 import { deleteDeal } from '@/services/deals-service'
 import { removeDeal } from '@/store/deals-slice'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth-store'
 import {
   Dialog,
   DialogContent,
@@ -109,11 +110,13 @@ export function DealsTable({
   const [dealToDelete, setDealToDelete] = useState<Deal | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  const user = useAuthStore((s) => s.user)
+
   const handleDelete = async () => {
     if (!dealToDelete) return
     setIsDeleting(true)
     try {
-      await deleteDeal(dealToDelete.id)
+      await deleteDeal(dealToDelete.id, user?.id)
       dispatch(removeDeal(dealToDelete.id))
       if (onDeleted) onDeleted(dealToDelete.id)
       toast.success(`Deal ${dealToDelete.deal_number || dealToDelete.title} deleted successfully`)

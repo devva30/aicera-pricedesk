@@ -111,7 +111,7 @@ export async function fetchQuotesByDealId(dealId: string): Promise<Deal[]> {
 
 import { deleteOrdersByDealId } from './orders-service'
 
-export async function deleteDeal(id: string): Promise<void> {
+export async function deleteDeal(id: string, deletedBy?: string): Promise<void> {
   const deal = await fetchDealById(id).catch(() => null)
   const dealNumber = deal?.deal_number
 
@@ -119,6 +119,16 @@ export async function deleteDeal(id: string): Promise<void> {
   await deleteOrdersByDealId(id, dealNumber).catch(() => {})
 
   if (useAuthStore.getState().isDemo) {
+    // Notify the creator if someone else deleted it
+    if (deal && deletedBy && deletedBy !== deal.created_by) {
+      appendMockNotification({
+        user_id: deal.created_by,
+        deal_id: id,
+        title: 'Your deal was deleted',
+        message: `Deal ${deal.deal_number} — "${deal.title}" has been deleted by an administrator.`,
+        type: 'status_update',
+      })
+    }
     deleteMockDeal(id)
     return
   }
@@ -130,19 +140,67 @@ export async function deleteDeal(id: string): Promise<void> {
     const snap = await getDocs(q)
     const quoteDeletes = snap.docs.map((d) => deleteDoc(doc(db, 'quotes', d.id)))
     await Promise.all(quoteDeletes)
+
+    // Notify the deal creator if deleted by someone else
+    if (deal && deletedBy && deletedBy !== deal.created_by) {
+      try {
+        const notifId = `notif-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+        await setDoc(doc(db, 'notifications', notifId), {
+          user_id: deal.created_by,
+          deal_id: id,
+          title: 'Your deal was deleted',
+          message: `Deal ${deal.deal_number} — "${deal.title}" has been deleted by an administrator.`,
+          type: 'status_update',
+          is_read: false,
+          created_at: new Date().toISOString(),
+        })
+      } catch (err) {
+        console.error('Failed to write deal deletion notification:', err)
+      }
+    }
   } catch (e) {
     console.error('Error deleting deal from Firestore:', e)
   }
 }
 
-export async function deleteQuote(id: string): Promise<void> {
+export async function deleteQuote(id: string, deletedBy?: string): Promise<void> {
+  const quote = await fetchDealById(id).catch(() => null)
+
   if (useAuthStore.getState().isDemo) {
+    // Notify the creator if someone else deleted it
+    if (quote && deletedBy && deletedBy !== quote.created_by) {
+      appendMockNotification({
+        user_id: quote.created_by,
+        deal_id: id,
+        title: 'Your quote was deleted',
+        message: `Quote ${quote.quote_number || quote.deal_number} — "${quote.title}" has been deleted by an administrator.`,
+        type: 'status_update',
+      })
+    }
     deleteMockQuote(id)
     return
   }
   try {
     await deleteDoc(doc(db, 'quotes', id))
     await deleteDoc(doc(db, 'deals', id)).catch(() => {})
+
+    // Notify the quote creator if deleted by someone else
+    if (quote && deletedBy && deletedBy !== quote.created_by) {
+      try {
+        const notifId = `notif-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+        await setDoc(doc(db, 'notifications', notifId), {
+          user_id: quote.created_by,
+          deal_id: id,
+          title: 'Your quote was deleted',
+          message: `Quote ${quote.quote_number || quote.deal_number} — "${quote.title}" has been deleted by an administrator.`,
+          type: 'status_update',
+          is_read: false,
+          created_at: new Date().toISOString(),
+        })
+      } catch (err) {
+        console.error('Failed to write quote deletion notification:', err)
+      }
+    }
   } catch (e) {
     console.error('Error deleting quote from Firestore:', e)
   }

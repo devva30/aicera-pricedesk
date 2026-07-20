@@ -437,7 +437,7 @@ export function DashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 print:hidden">
-            {isSalesRep && (
+            {(isSalesRep || user?.role === 'admin') && (
               <Button onClick={() => navigate('/deals/new')} size="sm" className="h-9 px-4 text-xs font-semibold">
                 <Plus className="h-4 w-4 mr-1.5" />
                 Create New Deal

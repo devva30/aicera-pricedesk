@@ -619,11 +619,33 @@ export async function saveIncentiveDetails(
   }
 }
 
-export async function deleteOrder(id: string): Promise<void> {
+export async function deleteOrder(id: string, deletedBy?: string): Promise<void> {
   const isDemo = useAuthStore.getState().isDemo
   memoryOrdersCache = null // Invalidate memory cache so subsequent calls re-fetch clean list
+
+  // Fetch order first so we can notify the creator
+  const orderSnap = isDemo ? null : await (async () => {
+    try {
+      const { getDoc, doc: fsDoc } = await import('firebase/firestore')
+      const snap = await getDoc(fsDoc(db, 'orders', id))
+      return snap.exists() ? snap.data() : null
+    } catch { return null }
+  })()
+
   if (isDemo) {
     const list = getMockOrders()
+    const order = list.find((o) => o.id === id)
+    // Notify the order's sales rep if deleted by someone else
+    if (order && deletedBy && deletedBy !== order.sales_rep_id) {
+      const { appendMockNotification } = await import('@/lib/mock-data')
+      appendMockNotification({
+        user_id: order.sales_rep_id,
+        deal_id: order.deal_id,
+        title: 'Your order was deleted',
+        message: `Order ${order.order_number} — "${order.title}" has been deleted by an administrator.`,
+        type: 'status_update',
+      })
+    }
     const index = list.findIndex((o) => o.id === id)
     if (index !== -1) {
       list.splice(index, 1)
@@ -633,8 +655,26 @@ export async function deleteOrder(id: string): Promise<void> {
   }
 
   try {
-    const { deleteDoc, doc: firestoreDoc } = await import('firebase/firestore')
+    const { deleteDoc, doc: firestoreDoc, setDoc: fsSetDoc } = await import('firebase/firestore')
     await deleteDoc(firestoreDoc(db, 'orders', id))
+
+    // Notify the order creator if deleted by someone else
+    if (orderSnap && deletedBy && deletedBy !== orderSnap.sales_rep_id) {
+      try {
+        const notifId = `notif-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+        await fsSetDoc(firestoreDoc(db, 'notifications', notifId), {
+          user_id: orderSnap.sales_rep_id,
+          deal_id: orderSnap.deal_id || null,
+          title: 'Your order was deleted',
+          message: `Order ${orderSnap.order_number} — "${orderSnap.title}" has been deleted by an administrator.`,
+          type: 'status_update',
+          is_read: false,
+          created_at: new Date().toISOString(),
+        })
+      } catch (err) {
+        console.error('Failed to write order deletion notification:', err)
+      }
+    }
   } catch (e) {
     console.error('Failed to delete order from firestore:', e)
     throw e

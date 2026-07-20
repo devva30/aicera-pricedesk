@@ -88,15 +88,15 @@ export function LoginPage() {
       const res = await login(data.email, data.password, data.role)
       if (res && res.redirectWarning) {
         toast.dismiss(toastId)
-        toast.warning(res.redirectWarning, { duration: 6000 })
+        toast.warning(res.redirectWarning, { duration: 1500 })
       } else {
-        toast.success('Signed in successfully!', { id: toastId })
+        toast.success('Signed in successfully!', { id: toastId, duration: 1500 })
       }
       navigate('/dashboard')
     } catch (err: any) {
       const msg = err.message || 'Authentication failed. Please verify credentials.'
       setError(msg)
-      toast.error(msg, { id: toastId })
+      toast.error(msg, { id: toastId, duration: 1500 })
     }
   }
 
@@ -105,7 +105,7 @@ export function LoginPage() {
       setDemoLoading(item.key)
       const customUser = DEMO_USERS[item.key] || DEMO_USERS.sales
       loginDemo(item.role, customUser)
-      toast.success(`Demo mode — signed in as ${item.name || customUser.full_name}`)
+      toast.success(`Demo mode — signed in as ${item.name || customUser.full_name}`, { duration: 1500 })
       navigate('/dashboard', { replace: true })
     } catch (e) {
       console.error('Demo login error:', e)

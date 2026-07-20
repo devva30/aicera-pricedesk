@@ -235,7 +235,7 @@ export function OrdersListPage() {
     if (!orderToDelete) return
     setIsDeleting(true)
     try {
-      await deleteOrder(orderToDelete.id)
+      await deleteOrder(orderToDelete.id, user?.id)
       setOrders((prev) => prev.filter((o) => o.id !== orderToDelete.id))
       toast.success(`Order ${orderToDelete.order_number || orderToDelete.title} deleted successfully`)
       setOrderToDelete(null)
