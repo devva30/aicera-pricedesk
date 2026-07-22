@@ -528,6 +528,7 @@ export function AdminSettingsPage() {
                     step={0.5}
                     value={(salesSettings.bottom_line_pct * 100).toFixed(1)}
                     onChange={(e) => setSalesSettings((s) => ({ ...s, bottom_line_pct: Number(e.target.value) / 100 }))}
+                    onFocus={(e) => e.target.select()}
                     className="h-9 text-sm font-mono max-w-[100px]"
                   />
                   <span className="text-sm font-bold text-muted-foreground">%</span>
@@ -545,6 +546,7 @@ export function AdminSettingsPage() {
                     step={0.5}
                     value={(salesSettings.incentive_pct * 100).toFixed(1)}
                     onChange={(e) => setSalesSettings((s) => ({ ...s, incentive_pct: Number(e.target.value) / 100 }))}
+                    onFocus={(e) => e.target.select()}
                     className="h-9 text-sm font-mono max-w-[100px]"
                   />
                   <span className="text-sm font-bold text-muted-foreground">%</span>
@@ -562,6 +564,7 @@ export function AdminSettingsPage() {
                     step={0.5}
                     value={(salesSettings.floor_margin_pct * 100).toFixed(1)}
                     onChange={(e) => setSalesSettings((s) => ({ ...s, floor_margin_pct: Number(e.target.value) / 100 }))}
+                    onFocus={(e) => e.target.select()}
                     className="h-9 text-sm font-mono max-w-[100px]"
                   />
                   <span className="text-sm font-bold text-muted-foreground">%</span>
@@ -813,7 +816,7 @@ export function AdminSettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <Label>Audit log retention (days)</Label>
-              <Input type="number" defaultValue={2555} className="mt-1.5 max-w-[160px]" />
+              <Input type="number" defaultValue={2555} onFocus={(e) => e.target.select()} className="mt-1.5 max-w-[160px]" />
             </div>
             <Button
               variant="outline"

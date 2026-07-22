@@ -342,23 +342,26 @@ export function DashboardPage() {
   const totalToplineTarget = filteredTargets.reduce((s, t) => s + t.topline_target, 0) * targetMultiplier
   const totalBottomlineTarget = totalToplineTarget * bottomLinePct
 
-  const totalRevenueBooked = filteredOrders.reduce((s, o) => s + orderRevenue(o), 0)
-  const totalMarginEarned = filteredOrders.reduce((s, o) => s + orderMargin(o), 0)
+  // Revenue Booked, Margin Earned & Incentive Payable only count orders where Sales Ops has
+  // ticked all checklist items (order_status === 'Closed').
+  const closedOrders = filteredOrders.filter((o) => o.order_status === 'Closed')
+
+  const totalRevenueBooked = closedOrders.reduce((s, o) => s + orderRevenue(o), 0)
+  const totalMarginEarned = closedOrders.reduce((s, o) => s + orderMargin(o), 0)
   const totalRevenueToGo = Math.max(totalToplineTarget - totalRevenueBooked, 0)
   const totalMarginToGo = Math.max(totalBottomlineTarget - totalMarginEarned, 0)
   const totalIncentivePayable = totalMarginEarned * incentivePct
   const revenueAchPct = totalToplineTarget > 0 ? (totalRevenueBooked / totalToplineTarget) * 100 : 0
   const marginAchPct = totalBottomlineTarget > 0 ? (totalMarginEarned / totalBottomlineTarget) * 100 : 0
 
-
-
   // ─── Chart data: dynamic salesperson or OEM bar chart ───────────────────────────
 
   const chartData = useMemo(() => {
     return filteredTargets.map((t) => {
-      const repOrders = filteredOrders.filter((o) => o.sales_rep_id === t.salesperson_id || o.sales_rep_name === t.salesperson_name)
-      const rev = repOrders.reduce((s, o) => s + orderRevenue(o), 0)
-      const margin = repOrders.reduce((s, o) => s + orderMargin(o), 0)
+      // Both Rev Booked & Margin Earned count checklist-closed orders only
+      const repClosedOrders = closedOrders.filter((o) => o.sales_rep_id === t.salesperson_id || o.sales_rep_name === t.salesperson_name)
+      const rev = repClosedOrders.reduce((s, o) => s + orderRevenue(o), 0)
+      const margin = repClosedOrders.reduce((s, o) => s + orderMargin(o), 0)
       const name = (t.salesperson_name || 'Sales Rep').split(' ')[0]
       return {
         name,
@@ -368,21 +371,22 @@ export function DashboardPage() {
         'Margin Earned': margin,
       }
     })
-  }, [filteredTargets, filteredOrders, bottomLinePct, targetMultiplier])
+  }, [filteredTargets, closedOrders, bottomLinePct, targetMultiplier])
 
   // ─── Chart data: monthly trend ────────────────────────────────────────────
 
   const monthlyTrend = useMemo(() => {
     return FY_MONTHS.map((m) => {
       const mIdx = MONTHS.indexOf(m)
-      const mOrders = filteredOrders.filter((o) => o.created_at && new Date(o.created_at).getMonth() === mIdx)
+      // Both Revenue & Margin count closed (checklist-complete) orders only
+      const mClosedOrders = closedOrders.filter((o) => o.created_at && new Date(o.created_at).getMonth() === mIdx)
       return {
         month: m,
-        Revenue: mOrders.reduce((s, o) => s + orderRevenue(o), 0),
-        Margin: mOrders.reduce((s, o) => s + orderMargin(o), 0),
+        Revenue: mClosedOrders.reduce((s, o) => s + orderRevenue(o), 0),
+        Margin: mClosedOrders.reduce((s, o) => s + orderMargin(o), 0),
       }
     })
-  }, [filteredOrders])
+  }, [closedOrders])
 
   // ─── Price Desk status counts ─────────────────────────────────────────────
 
@@ -972,11 +976,11 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* ── Recent Deals ── */}
+      {/* ── My Deals ── */}
       {(isSalesRep || canSeeAll) && (
         <>
           <div className="flex items-center justify-between border-b border-border/60 pb-2">
-            <h2 className="text-lg font-bold font-display text-foreground">Recent Pricing Deals</h2>
+            <h2 className="text-lg font-bold font-display text-foreground">My Deals</h2>
           </div>
           <DealsTable deals={actualDeals.slice(0, canSeeAll ? 20 : 10)} showCreator={!isSalesRep} />
         </>

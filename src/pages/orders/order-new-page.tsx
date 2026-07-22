@@ -434,6 +434,7 @@ export function OrderNewPage() {
                     type="number"
                     value={quotedValue}
                     onChange={(e) => setQuotedValue(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     className="mt-1.5 h-10 text-xs bg-slate-50/50 border-border"
                     placeholder="Amount"
                   />
@@ -513,6 +514,7 @@ export function OrderNewPage() {
                           placeholder="Qty"
                           value={item.quantity || ''}
                           onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                          onFocus={(e) => e.target.select()}
                           className="h-9 border-border text-xs focus:ring-1 focus:ring-primary bg-white"
                           min="1"
                         />
@@ -523,6 +525,7 @@ export function OrderNewPage() {
                           placeholder="Unit Price"
                           value={item.transfer_price || ''}
                           onChange={(e) => handleItemChange(index, 'transfer_price', e.target.value)}
+                          onFocus={(e) => e.target.select()}
                           className="h-9 border-border text-xs focus:ring-1 focus:ring-primary bg-white"
                           min="0"
                         />
@@ -551,6 +554,7 @@ export function OrderNewPage() {
                       type="number"
                       value={poDiscountPct || ''}
                       onChange={(e) => setPoDiscountPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-border text-xs bg-slate-50/50"
                       min="0"
                       max="100"
@@ -562,6 +566,7 @@ export function OrderNewPage() {
                       type="number"
                       value={poCgstPct || ''}
                       onChange={(e) => setPoCgstPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-border text-xs bg-slate-50/50"
                       min="0"
                     />
@@ -572,6 +577,7 @@ export function OrderNewPage() {
                       type="number"
                       value={poSgstPct || ''}
                       onChange={(e) => setPoSgstPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-border text-xs bg-slate-50/50"
                       min="0"
                     />
@@ -582,6 +588,7 @@ export function OrderNewPage() {
                       type="number"
                       value={poIgstPct || ''}
                       onChange={(e) => setPoIgstPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-border text-xs bg-slate-50/50"
                       min="0"
                     />
@@ -592,6 +599,7 @@ export function OrderNewPage() {
                       type="number"
                       value={poShipping || ''}
                       onChange={(e) => setPoShipping(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-border text-xs bg-slate-50/50"
                       min="0"
                     />

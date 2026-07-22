@@ -773,6 +773,7 @@ export function DeliveryChallansPage() {
                         type="number" min="0"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className="h-9 border-slate-200 text-xs bg-white focus:ring-1 focus:ring-teal-500"
                       />
                     </div>
@@ -782,6 +783,7 @@ export function DeliveryChallansPage() {
                         type="number" min="0"
                         value={item.delivered_quantity}
                         onChange={(e) => handleItemChange(idx, 'delivered_quantity', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className="h-9 border-slate-200 text-xs bg-white focus:ring-1 focus:ring-teal-500"
                       />
                     </div>
@@ -793,6 +795,7 @@ export function DeliveryChallansPage() {
                         type="number" min="0"
                         value={item.unit_price}
                         onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className="h-9 border-slate-200 text-xs bg-white focus:ring-1 focus:ring-teal-500"
                       />
                     </div>

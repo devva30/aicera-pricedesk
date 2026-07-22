@@ -199,8 +199,44 @@ export function DealsTable({
       {
         accessorKey: 'total_revenue',
         header: 'Revenue',
-        cell: ({ row }) =>
-          formatCurrency(row.original.total_revenue || 0, row.original.currency),
+        cell: ({ row }) => {
+          const d = row.original
+          // Fall back to computing from items if total_revenue is missing/zero
+          const rev =
+            d.total_revenue > 0
+              ? d.total_revenue
+              : (d.items ?? []).reduce(
+                  (s, i) => s + (Number(i.quoted_price) || 0) * (Number(i.quantity) || 0),
+                  0
+                )
+          return formatCurrency(rev, d.currency)
+        },
+      },
+      {
+        id: 'net_value',
+        header: 'Net Value',
+        cell: ({ row }) => {
+          const d = row.original
+          const rev =
+            d.total_revenue > 0
+              ? d.total_revenue
+              : (d.items ?? []).reduce(
+                  (s, i) => s + (Number(i.quoted_price) || 0) * (Number(i.quantity) || 0),
+                  0
+                )
+          const cost = d.total_cost > 0
+            ? d.total_cost
+            : (d.items ?? []).reduce(
+                (s, i) => s + (Number(i.transfer_price) || 0) * (Number(i.quantity) || 0),
+                0
+              )
+          const netValue = rev - cost
+          return (
+            <span className={cn('font-semibold font-mono', netValue >= 0 ? 'text-emerald-600' : 'text-red-500')}>
+              {formatCurrency(netValue, d.currency)}
+            </span>
+          )
+        },
       },
       {
         accessorKey: 'net_margin_pct',
@@ -298,7 +334,7 @@ export function DealsTable({
       {/* Table Element container — horizontally scrollable on mobile */}
       <div className="glass-card overflow-hidden rounded-xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
+          <table className="w-full text-sm min-w-[820px]">
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="border-b border-border/50 bg-muted/30">

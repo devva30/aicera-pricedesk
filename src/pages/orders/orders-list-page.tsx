@@ -609,6 +609,7 @@ export function OrdersListPage() {
                         placeholder="Qty"
                         value={item.quantity || ''}
                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className="h-9 border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500"
                         min="1"
                       />
@@ -619,6 +620,7 @@ export function OrdersListPage() {
                         placeholder="Unit Price"
                         value={item.transfer_price || ''}
                         onChange={(e) => handleItemChange(index, 'transfer_price', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className="h-9 border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500"
                         min="0"
                       />
@@ -648,6 +650,7 @@ export function OrdersListPage() {
                   type="number"
                   value={poDiscountPct || ''}
                   onChange={(e) => setPoDiscountPct(Number(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   className="h-9 border-slate-200 text-xs bg-white"
                   min="0"
                   max="100"
@@ -659,6 +662,7 @@ export function OrdersListPage() {
                   type="number"
                   value={poCgstPct || ''}
                   onChange={(e) => setPoCgstPct(Number(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   className="h-9 border-slate-200 text-xs bg-white"
                   min="0"
                 />
@@ -669,6 +673,7 @@ export function OrdersListPage() {
                   type="number"
                   value={poSgstPct || ''}
                   onChange={(e) => setPoSgstPct(Number(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   className="h-9 border-slate-200 text-xs bg-white"
                   min="0"
                 />
@@ -679,6 +684,7 @@ export function OrdersListPage() {
                   type="number"
                   value={poIgstPct || ''}
                   onChange={(e) => setPoIgstPct(Number(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   className="h-9 border-slate-200 text-xs bg-white"
                   min="0"
                 />
@@ -689,6 +695,7 @@ export function OrdersListPage() {
                   type="number"
                   value={poShipping || ''}
                   onChange={(e) => setPoShipping(Number(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
                   className="h-9 border-slate-200 text-xs bg-white"
                   min="0"
                 />

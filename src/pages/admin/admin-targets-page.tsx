@@ -306,6 +306,7 @@ export function AdminTargetsPage() {
                 type="number"
                 value={form.topline_target || ''}
                 onChange={(e) => setForm((f) => ({ ...f, topline_target: Number(e.target.value) }))}
+                onFocus={(e) => e.target.select()}
                 placeholder="e.g. 30000000"
                 className="h-9 text-sm font-mono"
               />

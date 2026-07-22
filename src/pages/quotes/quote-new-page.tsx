@@ -106,10 +106,14 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
   )
 }
 
-function StyledInput({ className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+function StyledInput({ className = '', onFocus, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
+      onFocus={(e) => {
+        if (props.type === 'number') e.target.select()
+        onFocus?.(e)
+      }}
       className={`w-full h-11 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950/40 text-foreground focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-400/80 text-sm pl-3 pr-3 font-medium ${className}`}
     />
   )
@@ -1172,6 +1176,7 @@ export function QuoteNewPage() {
                               </td>
                               <td className="px-2 py-1.5">
                                 <input type="number" min={1} value={item.quantity}
+                                  onFocus={(e) => e.target.select()}
                                   onChange={e => {
                                     const val = Number(e.target.value)
                                     setBomData(prev => prev.map((x, j) => j === i ? { ...x, quantity: val } : x))

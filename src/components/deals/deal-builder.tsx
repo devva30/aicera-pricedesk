@@ -915,6 +915,7 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
                                 min="1"
                                 {...form.register(`items.${index}.quantity`)}
                                 placeholder="Qty"
+                                onFocus={(e) => e.target.select()}
                                 className="h-10 w-16 text-center text-[13px] bg-background border-border rounded-md font-mono"
                               />
                               {rowErrors?.quantity && (
@@ -951,6 +952,7 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
                               step="0.01"
                               {...form.register(`items.${index}.transfer_price`)}
                               placeholder="0.00"
+                              onFocus={(e) => e.target.select()}
                               className="h-10 text-[13px] bg-background border-border text-right pl-5 rounded-md font-mono"
                             />
                             {rowErrors?.transfer_price && (
@@ -968,6 +970,7 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
                               step="0.01"
                               {...form.register(`items.${index}.quoted_price`)}
                               placeholder="0.00"
+                              onFocus={(e) => e.target.select()}
                               className="h-10 text-[13px] bg-background border-border text-right pl-5 rounded-md font-mono"
                             />
                             {rowErrors?.quoted_price && (
@@ -1145,6 +1148,7 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
                       type="number"
                       {...form.register(`overheads.${index}.amount`)}
                       placeholder="Enter Amount"
+                      onFocus={(e) => e.target.select()}
                       className="h-10 text-[13px] bg-background border-border text-right pl-5 rounded-md font-mono"
                     />
                   </div>
@@ -1187,13 +1191,13 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
             </h2>
           </div>
 
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {/* Card 1: Total Cost */}
             <div className="bg-muted/15 border border-border p-4 rounded-xl hover:shadow-sm transition-all duration-200">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                Total Cost (deal)
+                Total Cost
               </p>
-              <p className="text-3xl font-extrabold font-display text-foreground mt-1 font-mono">
+              <p className="text-2xl font-extrabold font-display text-foreground mt-1 font-mono">
                 {formatCurrency(totalCost, 'INR')}
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">
@@ -1204,9 +1208,9 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
             {/* Card 2: Total Revenue */}
             <div className="bg-muted/15 border border-border p-4 rounded-xl hover:shadow-sm transition-all duration-200">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                Total Revenue (deal)
+                Total Revenue
               </p>
-              <p className="text-3xl font-extrabold font-display text-foreground mt-1 font-mono">
+              <p className="text-2xl font-extrabold font-display text-foreground mt-1 font-mono">
                 {formatCurrency(totalRevenue, 'INR')}
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">
@@ -1214,16 +1218,37 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
               </p>
             </div>
 
-            {/* Card 3: Net Margin */}
+            {/* Card 3: Net Value */}
+            <div className={cn(
+              'border p-4 rounded-xl hover:shadow-sm transition-all duration-200',
+              (totalRevenue - totalCost) >= 0
+                ? 'bg-emerald-500/5 border-emerald-500/25'
+                : 'bg-red-500/5 border-red-500/25'
+            )}>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                Net Value
+              </p>
+              <p className={cn(
+                'text-2xl font-extrabold font-display mt-1 font-mono',
+                (totalRevenue - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-500'
+              )}>
+                {formatCurrency(totalRevenue - totalCost, 'INR')}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Revenue minus total cost
+              </p>
+            </div>
+
+            {/* Card 4: Net Margin % */}
             <div className={`border p-4 rounded-xl hover:shadow-sm transition-all duration-200 ${marginBg}`}>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                Net Margin (deal)
+                Net Margin %
               </p>
-              <p className={`text-3xl font-extrabold font-display mt-1 font-mono ${marginColor}`}>
+              <p className={`text-2xl font-extrabold font-display mt-1 font-mono ${marginColor}`}>
                 {formatPercent(netMarginPct)}
               </p>
               <p className="text-[10px] text-muted-foreground mt-1">
-                {formatCurrency(totalRevenue - totalCost, 'INR')} Net Margin Value
+                {netMarginPct >= 8 ? '✅ Above floor margin' : '⚠️ Below floor margin (8%)'}
               </p>
             </div>
           </div>

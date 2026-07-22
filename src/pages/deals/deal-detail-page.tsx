@@ -735,7 +735,7 @@ export function DealDetailPage() {
                     })()}
                   </div>
                 ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 pt-4 print:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 pt-4 print:grid-cols-5">
                     <div className="bg-muted/20 border border-border p-3.5 rounded text-center">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Revenue</p>
                       <p className="text-lg font-bold mt-1 text-foreground">{formatCurrency(deal.total_revenue, deal.currency)}</p>
@@ -743,6 +743,20 @@ export function DealDetailPage() {
                     <div className="bg-muted/20 border border-border p-3.5 rounded text-center">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Costs</p>
                       <p className="text-lg font-bold mt-1 text-foreground">{formatCurrency(deal.total_cost, deal.currency)}</p>
+                    </div>
+                    <div className={cn(
+                      'border p-3.5 rounded text-center',
+                      (deal.total_revenue - deal.total_cost) >= 0
+                        ? 'bg-emerald-500/5 border-emerald-500/25'
+                        : 'bg-red-500/5 border-red-500/25'
+                    )}>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Net Value</p>
+                      <p className={cn(
+                        'text-lg font-bold mt-1',
+                        (deal.total_revenue - deal.total_cost) >= 0 ? 'text-emerald-600' : 'text-red-500'
+                      )}>
+                        {formatCurrency(deal.total_revenue - deal.total_cost, deal.currency)}
+                      </p>
                     </div>
                     <div className="bg-muted/20 border border-border p-3.5 rounded text-center">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Gross Margin</p>

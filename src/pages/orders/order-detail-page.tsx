@@ -1306,6 +1306,7 @@ export function OrderDetailPage() {
                             type="number"
                             value={editQuotedValue || ''}
                             onChange={(e) => setEditQuotedValue(Number(e.target.value) || 0)}
+                            onFocus={(e) => e.target.select()}
                             className="mt-1.5 h-10 text-xs bg-slate-50/50 border-border"
                             placeholder="Amount"
                           />
@@ -1378,6 +1379,7 @@ export function OrderDetailPage() {
                                 placeholder="Qty"
                                 value={item.quantity || ''}
                                 onChange={(e) => handleEditItemChange(index, 'quantity', e.target.value)}
+                                onFocus={(e) => e.target.select()}
                                 className="h-9 border-border text-xs bg-white"
                                 min="1"
                               />
@@ -1388,6 +1390,7 @@ export function OrderDetailPage() {
                                 placeholder="Unit Price"
                                 value={item.transfer_price || ''}
                                 onChange={(e) => handleEditItemChange(index, 'transfer_price', e.target.value)}
+                                onFocus={(e) => e.target.select()}
                                 className="h-9 border-border text-xs bg-white"
                                 min="0"
                               />
@@ -1416,6 +1419,7 @@ export function OrderDetailPage() {
                             type="number"
                             value={editDiscountPct || ''}
                             onChange={(e) => setEditDiscountPct(Number(e.target.value) || 0)}
+                            onFocus={(e) => e.target.select()}
                             className="h-9 border-border text-xs bg-slate-50/50"
                             min="0"
                             max="100"
@@ -1427,6 +1431,7 @@ export function OrderDetailPage() {
                             type="number"
                             value={editCgstPct || ''}
                             onChange={(e) => setEditCgstPct(Number(e.target.value) || 0)}
+                            onFocus={(e) => e.target.select()}
                             className="h-9 border-border text-xs bg-slate-50/50"
                             min="0"
                           />
@@ -1437,6 +1442,7 @@ export function OrderDetailPage() {
                             type="number"
                             value={editSgstPct || ''}
                             onChange={(e) => setEditSgstPct(Number(e.target.value) || 0)}
+                            onFocus={(e) => e.target.select()}
                             className="h-9 border-border text-xs bg-slate-50/50"
                             min="0"
                           />
@@ -1447,6 +1453,7 @@ export function OrderDetailPage() {
                             type="number"
                             value={editIgstPct || ''}
                             onChange={(e) => setEditIgstPct(Number(e.target.value) || 0)}
+                            onFocus={(e) => e.target.select()}
                             className="h-9 border-border text-xs bg-slate-50/50"
                             min="0"
                           />
@@ -1457,6 +1464,7 @@ export function OrderDetailPage() {
                             type="number"
                             value={editShipping || ''}
                             onChange={(e) => setEditShipping(Number(e.target.value) || 0)}
+                            onFocus={(e) => e.target.select()}
                             className="h-9 border-border text-xs bg-slate-50/50"
                             min="0"
                           />
@@ -2563,6 +2571,7 @@ export function OrderDetailPage() {
                             placeholder="Qty"
                             value={item.quantity || ''}
                             onChange={(e) => handleFormItemChange(index, 'quantity', e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="h-9 border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500"
                             min="1"
                           />
@@ -2573,6 +2582,7 @@ export function OrderDetailPage() {
                             placeholder="Unit Price"
                             value={item.transfer_price || ''}
                             onChange={(e) => handleFormItemChange(index, 'transfer_price', e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="h-9 border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500"
                             min="0"
                           />
@@ -2602,6 +2612,7 @@ export function OrderDetailPage() {
                       type="number"
                       value={formDiscountPct || ''}
                       onChange={(e) => setFormDiscountPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-slate-200 text-xs bg-white"
                       min="0"
                       max="100"
@@ -2613,6 +2624,7 @@ export function OrderDetailPage() {
                       type="number"
                       value={formCgstPct || ''}
                       onChange={(e) => setFormCgstPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-slate-200 text-xs bg-white"
                       min="0"
                     />
@@ -2623,6 +2635,7 @@ export function OrderDetailPage() {
                       type="number"
                       value={formSgstPct || ''}
                       onChange={(e) => setFormSgstPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-slate-200 text-xs bg-white"
                       min="0"
                     />
@@ -2633,6 +2646,7 @@ export function OrderDetailPage() {
                       type="number"
                       value={formIgstPct || ''}
                       onChange={(e) => setFormIgstPct(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-slate-200 text-xs bg-white"
                       min="0"
                     />
@@ -2643,6 +2657,7 @@ export function OrderDetailPage() {
                       type="number"
                       value={formShipping || ''}
                       onChange={(e) => setFormShipping(Number(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="h-9 border-slate-200 text-xs bg-white"
                       min="0"
                     />
