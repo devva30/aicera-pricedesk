@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   FileText,
+  FileSpreadsheet,
   CheckCircle2,
   Clock,
   XCircle,
@@ -21,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchDeals, fetchQuotes, deleteQuote } from '@/services/deals-service'
+import { exportDealsToExcel } from '@/lib/excel-exporter'
 import { formatCurrency } from '@/lib/utils'
 import type { Deal, DealStatus } from '@/types'
 import { EmptyState } from '@/components/shared/empty-state'
@@ -250,6 +252,15 @@ export function QuotesPage() {
               className="h-9 w-9"
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportDealsToExcel(quotes, 'PriceDesk_Quotes_Export')}
+              className="h-9 text-xs font-semibold px-3 gap-1.5 border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer"
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+              Download Worksheet
             </Button>
             {user.role === 'sales_rep' && (
               <Button
