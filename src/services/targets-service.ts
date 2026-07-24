@@ -16,12 +16,14 @@ export function clearStaleMockTargets(): void {
     const raw = localStorage.getItem(TARGETS_KEY)
     if (!raw) return
     const targets: SalesTarget[] = JSON.parse(raw)
-    const staleIds = ['target-1', 'target-2', 'target-3']
-    if (targets.some((t) => staleIds.includes(t.id) || t.topline_target === 25000000)) {
+    const staleIds = ['target-1', 'target-2', 'target-3', 'target-rohan']
+    if (targets.some((t) => staleIds.includes(t.id) || t.topline_target > 5000000 || t.salesperson_id === 'demo-sales-3')) {
       localStorage.removeItem(TARGETS_KEY)
+      memoryTargetsCache = null
     }
   } catch {
     localStorage.removeItem(TARGETS_KEY)
+    memoryTargetsCache = null
   }
 }
 
@@ -40,7 +42,7 @@ function getMockTargets(): SalesTarget[] {
           id: 'target-arjun',
           salesperson_id: 'demo-sales',
           salesperson_name: 'Arjun Mehta',
-          topline_target: 15000000,
+          topline_target: 1500000,
           financial_year: 'FY 2026-27',
           is_active: true,
           created_at: new Date().toISOString(),
@@ -50,17 +52,7 @@ function getMockTargets(): SalesTarget[] {
           id: 'target-kavita',
           salesperson_id: 'demo-sales-2',
           salesperson_name: 'Kavita Reddy',
-          topline_target: 20000000,
-          financial_year: 'FY 2026-27',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'target-rohan',
-          salesperson_id: 'demo-sales-3',
-          salesperson_name: 'Rohan Verma',
-          topline_target: 25000000,
+          topline_target: 2000000,
           financial_year: 'FY 2026-27',
           is_active: true,
           created_at: new Date().toISOString(),
@@ -71,9 +63,10 @@ function getMockTargets(): SalesTarget[] {
       memoryTargetsCache = defaults
       return defaults
     }
-    const parsed = JSON.parse(raw)
-    memoryTargetsCache = parsed
-    return parsed
+    const parsed: SalesTarget[] = JSON.parse(raw)
+    const filtered = parsed.filter((t) => t.salesperson_id !== 'demo-sales-3')
+    memoryTargetsCache = filtered
+    return filtered
   } catch (e) {
     console.error('Failed to load targets from localStorage:', e)
     return []

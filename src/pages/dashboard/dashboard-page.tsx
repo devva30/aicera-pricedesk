@@ -665,7 +665,7 @@ export function DashboardPage() {
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
           <Package className="h-3.5 w-3.5 text-sky-500" /> Operations & Pipeline
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
           <KpiCard
             label="Pending Quotes"
             value={String(pdPending)}

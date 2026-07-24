@@ -303,23 +303,23 @@ export function DealsTable({
   return (
     <div className="space-y-4">
       {/* Search & Filter Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border p-4 rounded-xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border p-3.5 sm:p-4 rounded-xl shadow-xs">
         {/* Search Input Box */}
         <div className="relative max-w-md w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search deals by title, customer, or deal #..."
+            placeholder="Search deals, customer, or deal #..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-10 border-border text-xs rounded-lg w-full bg-background"
+            className="pl-9 h-9 sm:h-10 border-border text-xs rounded-lg w-full bg-background"
           />
         </div>
 
         {/* Status Dropdown Filter */}
         {!hideStatusFilter && (
-          <div className="w-full md:w-56">
+          <div className="w-full sm:w-52">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full h-10 border-border bg-background text-xs font-semibold">
+              <SelectTrigger className="w-full h-9 sm:h-10 border-border bg-background text-xs font-semibold">
                 <SelectValue placeholder="Filter by Status" />
               </SelectTrigger>
               <SelectContent>
@@ -337,8 +337,11 @@ export function DealsTable({
 
       {/* Table Element container — horizontally scrollable on mobile */}
       <div className="glass-card overflow-hidden rounded-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[820px]">
+        <div className="sm:hidden px-3 py-1.5 bg-muted/40 text-[10px] text-muted-foreground flex items-center justify-between border-b border-border/40">
+          <span>👈 Swipe horizontally to view full table details 👉</span>
+        </div>
+        <div className="overflow-x-auto touch-pan-x">
+          <table className="w-full text-sm min-w-[760px]">
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="border-b border-border/50 bg-muted/30">

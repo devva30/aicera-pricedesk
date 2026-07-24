@@ -53,9 +53,8 @@ const DEMO_ROLES: {
   color: string
   bg: string
 }[] = [
-  { role: 'sales_rep',  key: 'sales',     label: 'Sales Rep (Sr)',    name: 'Arjun Mehta',  icon: TrendingUp,    color: 'text-primary',     bg: 'bg-primary/10 border-primary/20 hover:bg-primary/20'         },
-  { role: 'sales_rep',  key: 'sales_2',   label: 'Sales Rep (Reg)',   name: 'Kavita Reddy', icon: TrendingUp,    color: 'text-indigo-600',  bg: 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20' },
-  { role: 'sales_rep',  key: 'sales_3',   label: 'Sales Rep (Strat)', name: 'Rohan Verma',  icon: TrendingUp,    color: 'text-cyan-600',    bg: 'bg-cyan-500/10 border-cyan-500/20 hover:bg-cyan-500/20'     },
+  { role: 'sales_rep',  key: 'sales',     label: 'Sales Rep',         name: 'Arjun Mehta',  icon: TrendingUp,    color: 'text-primary',     bg: 'bg-primary/10 border-primary/20 hover:bg-primary/20'         },
+  { role: 'sales_rep',  key: 'sales_2',   label: 'Sales Rep',         name: 'Kavita Reddy', icon: TrendingUp,    color: 'text-indigo-600',  bg: 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20' },
   { role: 'technical',  key: 'technical', label: 'Tech Review',       name: 'Vikram Patel', icon: Wrench,        color: 'text-violet-600',  bg: 'bg-violet-500/10 border-violet-500/20 hover:bg-violet-500/20' },
   { role: 'finance',    key: 'finance',   label: 'Finance Review',    name: 'Priya Sharma', icon: Wallet,        color: 'text-emerald-600', bg: 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20' },
   { role: 'sales_head', key: 'sales_head',label: 'Sales Head / VP',  name: 'Ananya Iyer',  icon: ClipboardCheck, color: 'text-amber-600', bg: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20'    },
