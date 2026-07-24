@@ -577,12 +577,41 @@ export async function saveOrder(order: Partial<Order> & { items: DealItem[] }, u
       list.unshift(newOrder)
     }
     saveMockOrders(list)
+
+    // Notify assigned Ops Executive
+    if (newOrder.ops_owner) {
+      const opsUserId = newOrder.ops_owner === 'Chetan' ? 'demo-ops-chetan' : `demo-ops-${newOrder.ops_owner.toLowerCase()}`
+      const { appendMockNotification } = await import('@/lib/mock-data')
+      appendMockNotification({
+        user_id: opsUserId,
+        deal_id: newOrder.deal_id,
+        title: `Order Assigned: ${newOrder.order_number}`,
+        message: `Order ${newOrder.order_number} — "${newOrder.title}" has been assigned to you as Ops Executive for execution & fulfillment.`,
+        type: 'approval',
+      })
+    }
+
     return newOrder
   }
 
   // Live Firestore save
   try {
     await setDoc(doc(db, 'orders', id), newOrder)
+
+    if (newOrder.ops_owner) {
+      const opsUserId = newOrder.ops_owner === 'Chetan' ? 'demo-ops-chetan' : `demo-ops-${newOrder.ops_owner.toLowerCase()}`
+      const notifId = `notif-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+      await setDoc(doc(db, 'notifications', notifId), {
+        user_id: opsUserId,
+        deal_id: newOrder.deal_id || null,
+        title: `Order Assigned: ${newOrder.order_number}`,
+        message: `Order ${newOrder.order_number} — "${newOrder.title}" has been assigned to you as Ops Executive for execution & fulfillment.`,
+        type: 'approval',
+        is_read: false,
+        created_at: new Date().toISOString(),
+      })
+    }
+
     return newOrder
   } catch (e) {
     console.error('Failed to save order to firestore:', e)
@@ -623,6 +652,13 @@ export async function deleteOrder(id: string, deletedBy?: string): Promise<void>
   const isDemo = useAuthStore.getState().isDemo
   memoryOrdersCache = null // Invalidate memory cache so subsequent calls re-fetch clean list
 
+  const currentUser = useAuthStore.getState().user
+  let deleterText = 'an administrator'
+  if (currentUser) {
+    const roleLabel = currentUser.role === 'ops' ? 'Ops Executive' : currentUser.role === 'admin' ? 'Administrator' : currentUser.role === 'sales_head' ? 'Sales Head' : 'Sales Rep'
+    deleterText = `${currentUser.full_name || roleLabel} (${roleLabel})`
+  }
+
   // Fetch order first so we can notify the creator
   const orderSnap = isDemo ? null : await (async () => {
     try {
@@ -642,7 +678,7 @@ export async function deleteOrder(id: string, deletedBy?: string): Promise<void>
         user_id: order.sales_rep_id,
         deal_id: order.deal_id,
         title: 'Your order was deleted',
-        message: `Order ${order.order_number} — "${order.title}" has been deleted by an administrator.`,
+        message: `Order ${order.order_number} — "${order.title}" has been deleted by ${deleterText}.`,
         type: 'status_update',
       })
     }
@@ -666,7 +702,7 @@ export async function deleteOrder(id: string, deletedBy?: string): Promise<void>
           user_id: orderSnap.sales_rep_id,
           deal_id: orderSnap.deal_id || null,
           title: 'Your order was deleted',
-          message: `Order ${orderSnap.order_number} — "${orderSnap.title}" has been deleted by an administrator.`,
+          message: `Order ${orderSnap.order_number} — "${orderSnap.title}" has been deleted by ${deleterText}.`,
           type: 'status_update',
           is_read: false,
           created_at: new Date().toISOString(),

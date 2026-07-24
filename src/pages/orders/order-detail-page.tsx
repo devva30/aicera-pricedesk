@@ -1135,7 +1135,7 @@ export function OrderDetailPage() {
         {/* Ops Executive Dropdown */}
         <div className="text-left space-y-1.5">
           <label htmlFor="ops-owner" className="text-xs font-bold text-slate-500">OPS EXECUTIVE</label>
-          {user.role === 'ops' || user.role === 'admin' || user.role === 'sales_head' ? (
+          {user.role === 'admin' || user.role === 'sales_head' ? (
             <select
               id="ops-owner"
               value={order.ops_owner || ''}

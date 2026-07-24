@@ -30,10 +30,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   fetchNotifications: async (userId) => {
     set({ isLoading: true })
+    const currentUser = useAuthStore.getState().user
+    const isOps = currentUser?.role === 'ops'
     
     if (useAuthStore.getState().isDemo) {
       set({
-        notifications: MOCK_NOTIFICATIONS.filter((n) => n.user_id === userId),
+        notifications: MOCK_NOTIFICATIONS.filter((n) => 
+          n.user_id === userId || 
+          (isOps && (n.user_id === 'demo-ops-chetan' || n.user_id === 'demo-ops' || n.user_id.includes('ops')))
+        ),
         isLoading: false,
       })
       return

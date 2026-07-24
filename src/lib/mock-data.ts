@@ -515,7 +515,38 @@ export function appendMockAudit(entry: Omit<DealAudit, 'id' | 'created_at' | 'de
   persistMockAudit()
 }
 
-export const MOCK_NOTIFICATIONS: Notification[] = []
+export const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'notif-ops-101',
+    user_id: 'demo-ops-chetan',
+    deal_id: 'DEAL-2026-001',
+    title: 'New Order Worksheet Assigned',
+    message: 'Order ORD-2026-001 (Tata Logistics Core Infra) has been assigned to you for execution & checklist sign-off.',
+    type: 'approval',
+    is_read: false,
+    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  {
+    id: 'notif-ops-102',
+    user_id: 'demo-ops-chetan',
+    deal_id: 'DEAL-2026-002',
+    title: 'PO Delivery Checklist Update',
+    message: 'Order ORD-2026-002 (Apollo Hospitals HIS) requires Vendor PO verification and Delivery Gate checklist sign-off.',
+    type: 'status_update',
+    is_read: false,
+    created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
+  },
+  {
+    id: 'notif-ops-103',
+    user_id: 'demo-ops-chetan',
+    deal_id: 'DEAL-2026-003',
+    title: 'New Approved Deal Assigned',
+    message: 'Deal DEAL-2026-003 (Reliance Retail SD-WAN) was approved by Sales Head and assigned to you as Ops Executive.',
+    type: 'status_update',
+    is_read: false,
+    created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+]
 
 export function updateMockDeal(id: string, updates: Partial<Deal>) {
   const index = MOCK_DEALS.findIndex((d) => d.id === id)
@@ -798,7 +829,7 @@ export function persistMockCustomers() {
 }
 
 // Schema versioning to clear out messy or outdated test data on first load
-const SCHEMA_VERSION = 'v5.0_enterprise_multi_rep_demo'
+const SCHEMA_VERSION = 'v5.2_ops_notifications_fix'
 const LOCAL_STORAGE_VERSION_KEY = 'pricedesk_schema_version'
 
 try {
