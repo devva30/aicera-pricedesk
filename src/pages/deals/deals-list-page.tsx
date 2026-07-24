@@ -74,7 +74,7 @@ export function DealsListPage() {
             className="h-9 text-xs font-semibold px-3 gap-1.5 border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer"
           >
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-            Export Excel
+            Download Worksheet
           </Button>
           {(user.role === 'sales_rep' || user.role === 'admin') && (
             <Button onClick={() => navigate('/deals/new')} size="sm" className="h-9 text-xs font-semibold px-4">
