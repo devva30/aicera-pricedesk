@@ -150,10 +150,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 size="sm"
                 onClick={handleEnableAudioAndPush}
                 className="h-7 text-[10px] font-semibold gap-1 px-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 cursor-pointer"
-                title="Test Audio Chime & Request Desktop Push Alerts"
+                title="Audio Chime & Desktop Push Alerts"
               >
                 <Volume2 className="h-3 w-3 text-indigo-500" />
-                Test Sound & Push
+                Sound & Push
               </Button>
             </div>
 
