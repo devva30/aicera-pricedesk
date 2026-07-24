@@ -400,7 +400,8 @@ export function AdminUsersPage() {
               {loadingUsers ? (
                 <p className="text-sm text-muted-foreground py-8 text-center">Loading users...</p>
               ) : (
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto touch-pan-x">
+                  <table className="w-full text-sm min-w-[650px]">
                   <thead>
                     {userTable.getHeaderGroups().map((hg) => (
                       <tr key={hg.id} className="border-b text-muted-foreground">
@@ -424,6 +425,7 @@ export function AdminUsersPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
               )}
             </CardContent>
           </Card>

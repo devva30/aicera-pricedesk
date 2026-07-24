@@ -488,7 +488,7 @@ export function ReportsPage() {
       </div>
 
       {/* ── Tabs Selector ── */}
-      <div className="flex flex-wrap border-b border-border/60 bg-slate-50/50 dark:bg-slate-900/20 rounded-xl p-1 gap-1 border">
+      <div className="flex overflow-x-auto scrollbar-none border-b border-border/60 bg-slate-50/50 dark:bg-slate-900/20 rounded-xl p-1 gap-1 border touch-pan-x">
         {tabList.map((t) => {
           const Icon = t.icon
           const isActive = activeTab === t.key
@@ -496,14 +496,14 @@ export function ReportsPage() {
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              className={`flex-none flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 isActive
                   ? 'bg-background shadow-sm border text-primary border-primary/20'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
               }`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline whitespace-nowrap">{t.label}</span>
+              <span className="whitespace-nowrap">{t.label}</span>
             </button>
           )
         })}
@@ -511,11 +511,14 @@ export function ReportsPage() {
 
       {/* ── Report Content Area ── */}
       <Card className="shadow-sm border-border bg-card overflow-hidden">
+        <div className="sm:hidden px-3 py-1.5 bg-muted/40 text-[10px] text-muted-foreground flex items-center justify-between border-b border-border/40">
+          <span>👈 Swipe horizontally to view full report details 👉</span>
+        </div>
         <CardContent className="p-0">
           {/* Tab 1: Revenue Report */}
           {activeTab === 'revenue' && isTabVisible('revenue') && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
+            <div className="overflow-x-auto touch-pan-x">
+              <table className="w-full text-left border-collapse text-xs min-w-[760px]">
                 <thead>
                   <tr className="bg-muted/30 border-b border-border/40 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
                     <th className="px-4 py-3">Order Number</th>

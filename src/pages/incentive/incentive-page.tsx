@@ -336,8 +336,11 @@ export function IncentivePage() {
             </div>
             <span className="text-[10px] text-muted-foreground">{settings?.financial_year}</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="sm:hidden px-3 py-1.5 bg-muted/40 text-[10px] text-muted-foreground flex items-center justify-between border-b border-border/40">
+            <span>👈 Swipe horizontally to view full incentive summary 👉</span>
+          </div>
+          <div className="overflow-x-auto touch-pan-x">
+            <table className="w-full text-left border-collapse text-xs min-w-[900px]">
               <thead>
                 <tr className="bg-muted/30 border-b border-border/40">
                   <th className="px-4 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider sticky left-0 bg-muted/30">Sales Person</th>

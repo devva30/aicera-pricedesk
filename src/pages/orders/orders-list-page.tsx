@@ -379,8 +379,11 @@ export function OrdersListPage() {
         </div>
       ) : (
         <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="sm:hidden px-3 py-1.5 bg-muted/40 text-[10px] text-muted-foreground flex items-center justify-between border-b border-border/40">
+            <span>👈 Swipe horizontally to view full order details 👉</span>
+          </div>
+          <div className="overflow-x-auto touch-pan-x">
+            <table className="w-full text-left border-collapse min-w-[780px]">
               <thead>
                 <tr className="bg-muted/40 border-b border-border/50 text-xs font-semibold text-muted-foreground uppercase">
                   <th className="p-4">Order Number</th>

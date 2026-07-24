@@ -372,8 +372,11 @@ export function QuotesPage() {
           </div>
 
           <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="sm:hidden px-3 py-1.5 bg-muted/40 text-[10px] text-muted-foreground flex items-center justify-between border-b border-border/40">
+              <span>👈 Swipe horizontally to view full quote details 👉</span>
+            </div>
+            <div className="overflow-x-auto touch-pan-x">
+              <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-muted/30 border-b border-border/40 text-[10px] font-bold text-muted-foreground uppercase">
                     <th className="p-3 pl-4">Quote #</th>
@@ -492,8 +495,11 @@ export function QuotesPage() {
           />
         ) : (
           <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="sm:hidden px-3 py-1.5 bg-muted/40 text-[10px] text-muted-foreground flex items-center justify-between border-b border-border/40">
+              <span>👈 Swipe horizontally to view full quote details 👉</span>
+            </div>
+            <div className="overflow-x-auto touch-pan-x">
+              <table className="w-full text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-muted/30 border-b border-border/40 text-[10px] font-bold text-muted-foreground uppercase">
                     <th className="p-3 pl-4">Quote #</th>
