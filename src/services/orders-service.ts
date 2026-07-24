@@ -450,12 +450,17 @@ function saveMockOrders(orders: Order[]) {
 }
 
 export async function fetchOrders(role: UserRole, userId: string): Promise<Order[]> {
+  const currentUser = useAuthStore.getState().user
   if (useAuthStore.getState().isDemo) {
     const orders = getMockOrders()
     if (role === 'sales_rep') {
       return orders.filter((o) => o.sales_rep_id === userId)
     }
-    return orders // Finance sees all orders
+    if (role === 'ops') {
+      const opsName = currentUser?.full_name || 'Chetan'
+      return orders.filter((o) => o.ops_owner === opsName)
+    }
+    return orders // Admin, Sales Head, Technical, Finance see all orders
   }
 
   // Live Firestore fetch
@@ -469,6 +474,10 @@ export async function fetchOrders(role: UserRole, userId: string): Promise<Order
     })
     if (role === 'sales_rep') {
       return list.filter((o) => o.sales_rep_id === userId)
+    }
+    if (role === 'ops') {
+      const opsName = currentUser?.full_name || 'Chetan'
+      return list.filter((o) => o.ops_owner === opsName)
     }
     return list
   } catch (e) {

@@ -266,7 +266,8 @@ export function OrdersListPage() {
       (order.title || '').toLowerCase().includes(q) ||
       (order.customer_name || '').toLowerCase().includes(q) ||
       (order.oem || '').toLowerCase().includes(q) ||
-      (order.sales_rep_name || '').toLowerCase().includes(q)
+      (order.sales_rep_name || '').toLowerCase().includes(q) ||
+      (order.ops_owner || '').toLowerCase().includes(q)
     )
   })
 
