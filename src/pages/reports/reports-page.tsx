@@ -24,7 +24,7 @@ import { fetchUsers } from '@/services/users-service'
 import type { Order, SalesTarget, SalesSettings, User as UserProfile } from '@/types'
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
-import { EmptyState } from '@/components/shared/empty-state'
+import { exportReportToExcel } from '@/lib/excel-exporter'
 
 type ReportTab = 'revenue' | 'margin' | 'incentive' | 'sales' | 'pending' | 'completed' | 'business'
 
@@ -163,13 +163,7 @@ export function ReportsPage() {
   const incentivePct = settings?.incentive_pct ?? 0.05
   const bottomLinePct = settings?.bottom_line_pct ?? 0.08
 
-  // Export CSV Handler
-  const handleExportCSV = () => {
-    let csvContent = ''
-    let filename = `Report_${activeTab}.csv`
-
-import { exportReportToExcel } from '@/lib/excel-exporter'
-
+  // Export CSV / Excel Handler
   const handleExportCSV = () => {
     let title = 'PriceDesk Report Export'
     let headers: string[] = []
