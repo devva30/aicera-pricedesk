@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, LogOut, Menu, Moon, Sun, User, Search } from 'lucide-react'
+import { Bell, LogOut, Menu, Moon, Sun, User, Search, Volume2, CheckCircle2, ExternalLink, Check, Sparkles } from 'lucide-react'
+import { playNotificationChime, requestBrowserNotificationPermission, showBrowserNotification } from '@/lib/audio-notifications'
+import { approveDeal } from '@/services/deals-service'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -45,6 +48,30 @@ export function Header({ onMenuToggle }: HeaderProps) {
     navigate('/login')
   }
 
+  const handleEnableAudioAndPush = async () => {
+    playNotificationChime()
+    const permission = await requestBrowserNotificationPermission()
+    if (permission === 'granted') {
+      showBrowserNotification('PriceDesk Alerts Enabled!', 'Desktop alerts & sound chimes are active for deal approvals & order assignments.')
+      toast.success('Desktop Push Alerts & Sound Chimes active!')
+    } else {
+      toast.info('Sound chime played. Browser Push permission not granted.')
+    }
+  }
+
+  const handleQuickApprove = async (e: React.MouseEvent, notif: any) => {
+    e.stopPropagation()
+    if (!user || !notif.deal_id) return
+    const toastId = toast.loading('Approving deal from notification...')
+    try {
+      await approveDeal(notif.deal_id, user.id, 'pending_sales_head', false, 'Approved via quick notification action', 'Chetan')
+      markAsRead(notif.id)
+      toast.success('Deal approved successfully & Ops Executive assigned!', { id: toastId })
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to approve deal', { id: toastId })
+    }
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] md:h-16 md:pt-0 items-center justify-between border-b border-border/50 bg-background/80 backdrop-blur-xl px-3 md:px-6 gap-2">
 
@@ -72,21 +99,18 @@ export function Header({ onMenuToggle }: HeaderProps) {
       </div>
 
       {/* Search Input Trigger (Zoho style Global Search) */}
-      <div className="flex-1 max-w-md mx-4 hidden md:block">
+      <div className="flex-1 max-w-xs md:max-w-md mx-1 sm:mx-4">
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('pricedesk:command-open'))}
-          className="flex items-center w-full gap-2 px-3 py-1.5 text-xs text-muted-foreground border border-input rounded-lg bg-muted/40 hover:bg-muted/70 hover:text-foreground transition-all duration-200 outline-none text-left"
+          className="flex items-center w-full gap-2 px-2.5 py-1.5 text-xs text-muted-foreground border border-input rounded-lg bg-muted/40 hover:bg-muted/70 hover:text-foreground transition-all duration-200 outline-none text-left cursor-pointer"
         >
           <Search className="h-3.5 w-3.5 shrink-0 opacity-70" />
-          <span>Search deals, pages, actions...</span>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 ml-auto shadow-sm">
+          <span className="truncate">Search deals, orders, pages...</span>
+          <kbd className="hidden sm:inline-flex pointer-events-none h-5 select-none items-center gap-0.5 rounded border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 ml-auto shadow-sm">
             <span className="text-xs">⌘</span>K
           </kbd>
         </button>
       </div>
-
-      {/* Center spacer for mobile */}
-      <div className="flex-1 md:hidden" />
 
       {/* Right: actions */}
       <div className="flex items-center gap-1 md:gap-2">
@@ -115,31 +139,93 @@ export function Header({ onMenuToggle }: HeaderProps) {
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72 md:w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {notifications.length === 0 ? (
-              <div className="p-4 text-sm text-muted-foreground text-center">
-                No new notifications
+          <DropdownMenuContent align="end" className="w-80 md:w-96 p-0 border border-border shadow-xl">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-xs font-bold text-foreground">Notifications</span>
               </div>
-            ) : (
-              notifications.slice(0, 5).map((n) => (
-                <DropdownMenuItem
-                  key={n.id}
-                  className="flex flex-col items-start gap-1 p-3 cursor-pointer"
-                  onClick={() => {
-                    markAsRead(n.id)
-                    if (n.deal_id) navigate(`/deals/${n.deal_id}`)
-                  }}
-                >
-                  <span className={n.is_read ? 'font-normal text-sm' : 'font-semibold text-sm'}>
-                    {n.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground line-clamp-2">{n.message}</span>
-                  <span className="text-[10px] text-muted-foreground">{formatRelative(n.created_at)}</span>
-                </DropdownMenuItem>
-              ))
-            )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEnableAudioAndPush}
+                className="h-7 text-[10px] font-semibold gap-1 px-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50 cursor-pointer"
+                title="Test Audio Chime & Request Desktop Push Alerts"
+              >
+                <Volume2 className="h-3 w-3 text-indigo-500" />
+                Test Sound & Push
+              </Button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto divide-y divide-border/60">
+              {notifications.length === 0 ? (
+                <div className="p-6 text-xs text-muted-foreground text-center">
+                  No new notifications. Everything is up to date!
+                </div>
+              ) : (
+                notifications.slice(0, 6).map((n) => (
+                  <div
+                    key={n.id}
+                    className={`p-3 text-left transition-colors ${n.is_read ? 'bg-background hover:bg-muted/30' : 'bg-primary/5 hover:bg-primary/10'}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {!n.is_read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                          <span className={`text-xs ${n.is_read ? 'font-medium text-foreground' : 'font-bold text-foreground'}`}>
+                            {n.title}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1 leading-snug line-clamp-2">{n.message}</p>
+                        <span className="text-[10px] font-semibold text-slate-400 mt-1 block">{formatRelative(n.created_at)}</span>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          markAsRead(n.id)
+                        }}
+                        className="h-6 w-6 shrink-0 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                        title="Mark as read"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    {/* Interactive Action Buttons */}
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
+                      {n.deal_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            markAsRead(n.id)
+                            navigate(`/deals/${n.deal_id}`)
+                          }}
+                          className="h-7 text-[10px] font-semibold px-2.5 gap-1 border-border text-foreground hover:bg-muted cursor-pointer"
+                        >
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                          View Details
+                        </Button>
+                      )}
+
+                      {(user?.role === 'sales_head' || user?.role === 'admin') && n.type === 'approval' && n.deal_id && (
+                        <Button
+                          size="sm"
+                          onClick={(e) => handleQuickApprove(e, n)}
+                          className="h-7 text-[10px] font-semibold px-2.5 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          Quick Approve
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
 

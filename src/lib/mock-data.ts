@@ -801,6 +801,16 @@ export function appendMockNotification(notif: Omit<Notification, 'id' | 'created
   }
   MOCK_NOTIFICATIONS.unshift(newNotif)
   persistMockNotifications()
+
+  // Trigger Audio Chime & Browser Push Notification
+  try {
+    import('./audio-notifications').then(({ playNotificationChime, showBrowserNotification }) => {
+      playNotificationChime()
+      showBrowserNotification(newNotif.title, newNotif.message)
+    })
+  } catch (e) {
+    console.warn('Notification trigger error:', e)
+  }
 }
 
 // Customers Mock definitions

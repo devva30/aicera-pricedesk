@@ -60,6 +60,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Tech Queue', href: '/queue/technical', icon: Wrench, roles: ['technical', 'admin'] },
   { label: 'Finance Queue', href: '/queue/finance', icon: Wallet, roles: ['finance', 'admin'] },
   { label: 'Review Center', href: '/queue/sales-head', icon: ClipboardCheck, roles: ['sales_head', 'admin'] },
+  { label: 'Assigned Deals', href: '/deals', icon: FileText, roles: ['ops'] },
   { label: 'All Deals', href: '/deals', icon: FileText, roles: ['finance', 'technical', 'sales_head', 'admin'] },
   {
     label: 'My Orders',

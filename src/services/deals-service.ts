@@ -50,8 +50,16 @@ function filterDealsByRole(deals: Deal[], role: UserRole, userId: string): Deal[
       return deals.filter((d) =>
         ['pending_sales_head', 'approved', 'rejected'].includes(d.status)
       )
+    case 'ops': {
+      const currentUser = useAuthStore.getState().user
+      const opsName = currentUser?.full_name || 'Chetan'
+      return deals.filter(
+        (d) =>
+          d.assigned_ops_owner === opsName ||
+          d.ops_owner === opsName
+      )
+    }
     case 'admin':
-    case 'ops':
       return deals
     default:
       return deals
