@@ -13,3 +13,19 @@
     Content-Security-Policy = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob: wasm-unsafe-eval; script-src * 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob:; style-src * 'unsafe-inline' https://fonts.googleapis.com; font-src * data: https://fonts.gstatic.com; worker-src * blob:; img-src * data: blob:;"
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/registerSW.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
