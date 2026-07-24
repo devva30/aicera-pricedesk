@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   FileDown,
+  FileSpreadsheet,
   Search,
   Building,
   TrendingUp,
@@ -167,23 +168,34 @@ export function ReportsPage() {
     let csvContent = ''
     let filename = `Report_${activeTab}.csv`
 
+import { exportReportToExcel } from '@/lib/excel-exporter'
+
+  const handleExportCSV = () => {
+    let title = 'PriceDesk Report Export'
+    let headers: string[] = []
+    let rows: (string | number)[][] = []
+    let totalRow: (string | number)[] | undefined = undefined
+    let alignRightCols: number[] = []
+
     if (activeTab === 'revenue') {
-      const headers = ['Order Number', 'Date', 'Customer', 'Sales Rep', 'PO Number', 'Revenue (INR)']
-      const rows = myOrders.map((o) => [
+      title = 'PriceDesk — Revenue Report'
+      headers = ['Order Number', 'Date', 'Customer', 'Sales Rep', 'PO Number', 'Revenue (INR)']
+      alignRightCols = [5]
+      rows = myOrders.map((o) => [
         o.order_number,
         o.created_at ? formatDate(o.created_at) : '—',
         o.customer_name,
-        o.sales_rep_name,
+        o.sales_rep_name || 'N/A',
         getPoDisplayNumber(o),
         orderRevenue(o),
       ])
       const totalRev = myOrders.reduce((s, o) => s + orderRevenue(o), 0)
-      csvContent = [headers, ...rows, ['', '', '', 'TOTAL', '', totalRev]]
-        .map((e) => e.join(','))
-        .join('\n')
+      totalRow = ['TOTAL SUMMARY', '', '', '', '', totalRev]
     } else if (activeTab === 'margin') {
-      const headers = ['Order Number', 'Customer', 'Revenue', 'Cost', 'Margin', 'Margin %']
-      const rows = myOrders.map((o) => {
+      title = 'PriceDesk — Gross Margin Report'
+      headers = ['Order Number', 'Customer', 'Revenue (INR)', 'Transfer Cost (INR)', 'Margin (INR)', 'Margin %']
+      alignRightCols = [2, 3, 4, 5]
+      rows = myOrders.map((o) => {
         const r = orderRevenue(o)
         const c = orderCost(o)
         const m = r - c
@@ -194,23 +206,19 @@ export function ReportsPage() {
       const totalCost = myOrders.reduce((s, o) => s + orderCost(o), 0)
       const totalMargin = totalRev - totalCost
       const totalPct = totalRev > 0 ? (totalMargin / totalRev) * 100 : 0
-      csvContent = [
-        headers,
-        ...rows,
-        ['', 'TOTAL', totalRev, totalCost, totalMargin, `${(totalPct || 0).toFixed(1)}%`],
-      ]
-        .map((e) => e.join(','))
-        .join('\n')
+      totalRow = ['TOTAL SUMMARY', '', totalRev, totalCost, totalMargin, `${(totalPct || 0).toFixed(1)}%`]
     } else if (activeTab === 'incentive') {
-      const headers = [
-        'Sales Person',
-        'Revenue Target',
-        'Revenue Booked',
-        'Margin Target',
-        'Margin Earned',
-        'Incentive Payable',
+      title = 'PriceDesk — Sales Incentive Report'
+      headers = [
+        'Sales Representative',
+        'Revenue Target (INR)',
+        'Revenue Booked (INR)',
+        'Margin Target (INR)',
+        'Margin Earned (INR)',
+        'Incentive Payable (INR)',
       ]
-      const rows = myTargets.map((t) => {
+      alignRightCols = [1, 2, 3, 4, 5]
+      rows = myTargets.map((t) => {
         const repOrders = orders.filter(
           (o) => (o.sales_rep_id === t.salesperson_id || o.sales_rep_name === t.salesperson_name) && isOrderCompleted(o)
         )
@@ -220,10 +228,17 @@ export function ReportsPage() {
         const incentive = margin * incentivePct
         return [t.salesperson_name, t.topline_target, rev, marginTarget, margin, incentive]
       })
-      csvContent = [headers, ...rows].map((e) => e.join(',')).join('\n')
+      const totalTgt = myTargets.reduce((s, t) => s + (t.topline_target || 0), 0)
+      const totalRev = rows.reduce((s, r) => s + (Number(r[2]) || 0), 0)
+      const totalMarginTgt = totalTgt * bottomLinePct
+      const totalMarginEarned = rows.reduce((s, r) => s + (Number(r[4]) || 0), 0)
+      const totalInc = totalMarginEarned * incentivePct
+      totalRow = ['TOTAL SUMMARY', totalTgt, totalRev, totalMarginTgt, totalMarginEarned, totalInc]
     } else if (activeTab === 'sales') {
-      const headers = ['Sales Person', 'Target FY Revenue', 'Total Orders', 'Revenue Achieved', 'Margin Achieved']
-      const rows = myTargets.map((t) => {
+      title = 'PriceDesk — Sales Representative Performance'
+      headers = ['Sales Representative', 'Target FY Revenue (INR)', 'Total Orders', 'Revenue Achieved (INR)', 'Margin Achieved (INR)']
+      alignRightCols = [1, 2, 3, 4]
+      rows = myTargets.map((t) => {
         const repOrders = orders.filter(
           (o) => (o.sales_rep_id === t.salesperson_id || o.sales_rep_name === t.salesperson_name) && isOrderCompleted(o)
         )
@@ -231,11 +246,17 @@ export function ReportsPage() {
         const margin = repOrders.reduce((s, o) => s + orderMargin(o), 0)
         return [t.salesperson_name, t.topline_target, repOrders.length, rev, margin]
       })
-      csvContent = [headers, ...rows].map((e) => e.join(',')).join('\n')
+      const totalTgt = myTargets.reduce((s, t) => s + (t.topline_target || 0), 0)
+      const totalOrdersCount = rows.reduce((s, r) => s + (Number(r[2]) || 0), 0)
+      const totalRev = rows.reduce((s, r) => s + (Number(r[3]) || 0), 0)
+      const totalMargin = rows.reduce((s, r) => s + (Number(r[4]) || 0), 0)
+      totalRow = ['TOTAL SUMMARY', totalTgt, totalOrdersCount, totalRev, totalMargin]
     } else if (activeTab === 'pending') {
+      title = 'PriceDesk — Pending Orders Report'
+      headers = ['Order Number', 'Customer Name', 'PO Number', 'Expected Delivery', 'Completed Gates', 'Quoted Value (INR)']
+      alignRightCols = [5]
       const pendingOrders = myOrders.filter((o) => !isOrderCompleted(o))
-      const headers = ['Order Number', 'Customer', 'PO Number', 'Expected Delivery', 'Completed Gates']
-      const rows = pendingOrders.map((o) => {
+      rows = pendingOrders.map((o) => {
         const completedGatesCount = o.checklist ? Object.values(o.checklist).filter(Boolean).length : 0
         return [
           o.order_number,
@@ -243,50 +264,55 @@ export function ReportsPage() {
           getPoDisplayNumber(o),
           o.expected_delivery_date || '—',
           `${completedGatesCount}/10`,
+          orderRevenue(o),
         ]
       })
-      csvContent = [headers, ...rows].map((e) => e.join(',')).join('\n')
+      const totalVal = pendingOrders.reduce((s, o) => s + orderRevenue(o), 0)
+      totalRow = ['TOTAL PENDING', '', '', '', '', totalVal]
     } else if (activeTab === 'completed') {
+      title = 'PriceDesk — Completed Orders Report'
+      headers = ['Order Number', 'Customer Name', 'PO Number', 'Expected Delivery', 'Execution Status', 'Quoted Value (INR)']
+      alignRightCols = [5]
       const completedOrders = myOrders.filter((o) => isOrderCompleted(o))
-      const headers = ['Order Number', 'Customer', 'PO Number', 'Expected Delivery', 'Execution Status']
-      const rows = completedOrders.map((o) => [
+      rows = completedOrders.map((o) => [
         o.order_number,
         o.customer_name,
         getPoDisplayNumber(o),
         o.expected_delivery_date || '—',
         'Completed',
+        orderRevenue(o),
       ])
-      csvContent = [headers, ...rows].map((e) => e.join(',')).join('\n')
+      const totalVal = completedOrders.reduce((s, o) => s + orderRevenue(o), 0)
+      totalRow = ['TOTAL COMPLETED', '', '', '', '', totalVal]
     } else if (activeTab === 'business') {
-      const headers = canSeeAll
-        ? ['Business Account', 'Total Orders', 'Total Revenue (INR)', 'Margin Achieved (INR)']
-        : ['Business Account', 'Total Orders', 'Total Revenue (INR)']
-      const rows = businessReport.map((b) => canSeeAll
-        ? [b.customer, b.orderCount, b.revenue, b.margin]
-        : [b.customer, b.orderCount, b.revenue]
+      title = 'PriceDesk — Business Account Summary Report'
+      headers = canSeeAll
+        ? ['Business Account Name', 'Total Orders', 'Total Revenue (INR)', 'Margin Achieved (INR)']
+        : ['Business Account Name', 'Total Orders', 'Total Revenue (INR)']
+      alignRightCols = canSeeAll ? [1, 2, 3] : [1, 2]
+      rows = businessReport.map((b) =>
+        canSeeAll
+          ? [b.customer, b.orderCount, b.revenue, b.margin]
+          : [b.customer, b.orderCount, b.revenue]
       )
       const totalRev = businessReport.reduce((s, b) => s + b.revenue, 0)
-      const totalOrders = businessReport.reduce((s, b) => s + b.orderCount, 0)
+      const totalOrdersCount = businessReport.reduce((s, b) => s + b.orderCount, 0)
       const totalMargin = businessReport.reduce((s, b) => s + b.margin, 0)
-      csvContent = [
-        headers,
-        ...rows,
-        canSeeAll
-          ? ['TOTAL', totalOrders, totalRev, totalMargin]
-          : ['TOTAL', totalOrders, totalRev]
-      ]
-        .map((e) => e.join(','))
-        .join('\n')
+      totalRow = canSeeAll
+        ? ['TOTAL SUMMARY', totalOrdersCount, totalRev, totalMargin]
+        : ['TOTAL SUMMARY', totalOrdersCount, totalRev]
     }
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    toast.success('Report exported to CSV successfully.')
+    const filename = `PriceDesk_${activeTab.toUpperCase()}_Report`
+    exportReportToExcel({
+      title,
+      headers,
+      rows,
+      totalRow,
+      filename,
+      alignRightCols,
+    })
+    toast.success('Report exported to formatted Excel successfully.')
   }
 
   // Memoized Report Data calculations
@@ -389,9 +415,14 @@ export function ReportsPage() {
             <FileDown className="h-4 w-4 text-indigo-600" />
             Monthly PDF Report
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 text-xs gap-1.5 font-semibold">
-            <FileDown className="h-4 w-4" />
-            Export CSV
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            className="h-9 text-xs font-semibold px-3 gap-1.5 border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer shadow-sm"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            Export Excel
           </Button>
           <Button variant="outline" size="icon" onClick={load} title="Refresh" className="h-9 w-9">
             <RefreshCw className="h-4 w-4" />

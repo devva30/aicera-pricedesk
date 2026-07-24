@@ -184,3 +184,90 @@ export function exportOrdersToExcel(orders: Order[], filename = 'PriceDesk_Order
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+
+export interface ExportReportOptions {
+  title: string
+  subtitle?: string
+  headers: string[]
+  rows: (string | number)[][]
+  totalRow?: (string | number)[]
+  filename?: string
+  alignRightCols?: number[]
+}
+
+export function exportReportToExcel({
+  title,
+  subtitle,
+  headers,
+  rows,
+  totalRow,
+  filename = 'PriceDesk_Report_Export',
+  alignRightCols = [],
+}: ExportReportOptions) {
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+
+  let html = `
+  <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+      table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+      th { background-color: #1e1b4b; color: #ffffff; font-weight: bold; text-align: left; padding: 10px; border: 1px solid #312e81; font-size: 10pt; }
+      td { padding: 8px 10px; border: 1px solid #cbd5e1; vertical-align: middle; font-size: 10pt; }
+      .header-title { font-size: 16pt; font-weight: bold; color: #1e1b4b; margin-bottom: 4px; }
+      .sub-title { font-size: 10pt; color: #64748b; margin-bottom: 12px; }
+      .amount { text-align: right; font-weight: bold; }
+      .text-right { text-align: right; }
+      .footer-total { background-color: #f1f5f9; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <div class="header-title">${title}</div>
+    <div class="sub-title">${subtitle || `Generated on: ${dateStr}`} | Total Records: ${rows.length}</div>
+    <table>
+      <thead>
+        <tr>
+          ${headers.map((h, i) => `<th class="${alignRightCols.includes(i) ? 'text-right' : ''}">${h}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+  `
+
+  rows.forEach((row) => {
+    html += `<tr>`
+    row.forEach((cell, i) => {
+      const isRight = alignRightCols.includes(i)
+      const valStr = typeof cell === 'number' ? formatCurrency(cell) : String(cell ?? '')
+      html += `<td class="${isRight ? 'amount' : ''}">${valStr}</td>`
+    })
+    html += `</tr>`
+  })
+
+  if (totalRow && totalRow.length > 0) {
+    html += `<tr class="footer-total">`
+    totalRow.forEach((cell, i) => {
+      const isRight = alignRightCols.includes(i)
+      const valStr = typeof cell === 'number' ? formatCurrency(cell) : String(cell ?? '')
+      html += `<td class="${isRight ? 'amount' : ''}">${valStr}</td>`
+    })
+    html += `</tr>`
+  }
+
+  html += `
+      </tbody>
+    </table>
+  </body>
+  </html>
+  `
+
+  const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${filename}_${Date.now()}.xls`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
