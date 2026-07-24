@@ -140,6 +140,15 @@ export function OrderNewPage() {
 
   useEffect(() => {
     const autoAssignOps = async () => {
+      if (selectedDeal?.assigned_ops_owner) {
+        setOpsOwner(selectedDeal.assigned_ops_owner)
+        return
+      }
+      if (existingOrder?.ops_owner) {
+        setOpsOwner(existingOrder.ops_owner)
+        return
+      }
+
       try {
         const existingOrders = await fetchOrders(user.role, user.id)
         const counts = { Chetan: 0, Bhoomika: 0, Deekshit: 0 }
@@ -151,13 +160,21 @@ export function OrderNewPage() {
         const minOwner = (Object.keys(counts) as Array<keyof typeof counts>).reduce((a, b) => 
           counts[a] <= counts[b] ? a : b
         )
-        setOpsOwner(minOwner)
+        if (!selectedDeal?.assigned_ops_owner && !existingOrder?.ops_owner) {
+          setOpsOwner(minOwner)
+        }
       } catch (e) {
         console.error('Failed to run round-robin auto-assignment:', e)
       }
     }
     autoAssignOps()
-  }, [user])
+  }, [user, selectedDeal, existingOrder])
+
+  useEffect(() => {
+    if (selectedDeal?.assigned_ops_owner) {
+      setOpsOwner(selectedDeal.assigned_ops_owner)
+    }
+  }, [selectedDeal])
 
   const handleVendorSelectChange = (idxStr: string) => {
     setSelectedVendorIdx(idxStr)
@@ -568,7 +585,7 @@ export function OrderNewPage() {
                 </div>
                 <div className="lg:col-span-2">
                   <Label htmlFor="opsOwner" className="text-xs font-semibold text-muted-foreground">Ops Executive *</Label>
-                  {user?.role === 'admin' || user?.role === 'sales_head' ? (
+                  {user?.role === 'admin' ? (
                     <select
                       id="opsOwner"
                       value={opsOwner}
