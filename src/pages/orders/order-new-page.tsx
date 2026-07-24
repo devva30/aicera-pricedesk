@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ClipboardList, Calendar, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, ClipboardList, Calendar, Plus, Trash2, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchDeals } from '@/services/deals-service'
 import { saveOrder, fetchOrders } from '@/services/orders-service'
-import type { Deal } from '@/types'
+import type { Deal, Order, OrderVersion } from '@/types'
 import { cn, formatCurrency, formatPercent, getMarginColor } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -59,6 +59,8 @@ export function OrderNewPage() {
   // Selected deal details
   const [selectedDealId, setSelectedDealId] = useState('')
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
+  const [allExistingOrders, setAllExistingOrders] = useState<Order[]>([])
+  const [existingOrder, setExistingOrder] = useState<Order | null>(null)
 
   // Input fields
   const [selectedVendorIdx, setSelectedVendorIdx] = useState('')
@@ -121,12 +123,10 @@ export function OrderNewPage() {
           fetchDeals(user.role, user.id),
           fetchOrders(user.role, user.id),
         ])
-        // Build a set of deal IDs that already have an order, so we can block duplicates
-        const dealIdsWithOrder = new Set(
-          existingOrders.filter((o) => !!o.deal_id).map((o) => o.deal_id)
-        )
+        setAllExistingOrders(existingOrders)
+        // Show all approved deals
         const approved = deals.filter(
-          (d) => d.status === 'approved' && !d.is_quote_only && !dealIdsWithOrder.has(d.id)
+          (d) => d.status === 'approved' && !d.is_quote_only
         )
         setApprovedDeals(approved)
       } catch (e) {
@@ -186,6 +186,20 @@ export function OrderNewPage() {
     setSelectedDealId(dealId)
     const deal = approvedDeals.find((d) => d.id === dealId) || null
     setSelectedDeal(deal)
+
+    const existing = allExistingOrders.find((o) => o.deal_id === dealId)
+    setExistingOrder(existing || null)
+
+    if (existing) {
+      if (existing.supplier_name) setSupplierName(existing.supplier_name)
+      if (existing.contact_person) setContactPerson(existing.contact_person)
+      if (existing.email) setEmail(existing.email)
+      if (existing.phone) setPhone(existing.phone)
+      if (existing.payment_terms) setPaymentTerms(existing.payment_terms)
+      if (existing.expected_delivery_date) setExpectedDeliveryDate(existing.expected_delivery_date)
+      if (existing.vendor_address) setVendorAddress(existing.vendor_address)
+    }
+
     // Auto-fill OEM from the deal
     if (deal?.oem) {
       setOem(deal.oem)
@@ -193,14 +207,17 @@ export function OrderNewPage() {
     // Pre-fill Ops Executive pre-assigned by Sales Head upon deal approval
     if (deal?.assigned_ops_owner) {
       setOpsOwner(deal.assigned_ops_owner)
+    } else if (existing?.ops_owner) {
+      setOpsOwner(existing.ops_owner)
     }
+
     // Pre-populate items from the approved deal to preserve quoted price and transfer price
     if (deal && deal.items && deal.items.length > 0) {
       setPoItems(deal.items.map(item => ({
         product_name: item.product_name,
         quantity: item.quantity,
         transfer_price: item.transfer_price,
-        quoted_price: item.quoted_price
+        quoted_price: item.quoted_price || item.transfer_price
       })))
     } else {
       setPoItems([{ product_name: '', quantity: 1, transfer_price: 0 }])
@@ -233,49 +250,114 @@ export function OrderNewPage() {
     const toastId = toast.loading('Initializing order sheet...')
 
     try {
-      const order = await saveOrder({
-        deal_id: selectedDeal.id,
-        deal_number: selectedDeal.deal_number,
-        title: selectedDeal.title,
-        customer_name: selectedDeal.customer_name,
-        customer_id: selectedDeal.customer_id,
-        sales_rep_id: selectedDeal.created_by || user.id,
-        sales_rep_name: selectedDeal.creator?.full_name || user.full_name,
-        oem: oem.trim(),
-        quote_number: selectedDeal.quote_number || null,
-        supplier_name: supplierName.trim(),
-        supplier_invoice: '',
-        contact_person: contactPerson.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        quoted_value: total,
-        payment_terms: paymentTerms.trim(),
-        expected_delivery_date: expectedDeliveryDate.trim(),
-        vendor_address: vendorAddress.trim(),
-        ops_owner: opsOwner,
-        items: poItems.map(item => ({
-          sku: item.product_name.replace(/\s+/g, '-').toUpperCase(),
-          product_name: item.product_name,
-          quantity: item.quantity,
-          transfer_price: item.transfer_price,
-          quoted_price: item.quoted_price || item.transfer_price,
-          unit_of_measure: 'EA'
-        })),
-        discount_pct: poDiscountPct,
-        cgst_pct: poCgstPct,
-        sgst_pct: poSgstPct,
-        igst_pct: poIgstPct,
-        shipping_charge: poShipping,
-        notes: poNotes,
-        terms_conditions: poTerms
-      }, user.id)
+      let order: Order
+      if (existingOrder) {
+        const currentVerNumber = existingOrder.version_number || 1
+        const previousVersions = [...(existingOrder.previous_versions || [])]
+        const snapshot: OrderVersion = {
+          version_number: currentVerNumber,
+          saved_at: new Date().toISOString(),
+          saved_by: user.id,
+          saved_by_name: user.full_name,
+          supplier_name: existingOrder.supplier_name || '',
+          quoted_value: existingOrder.quoted_value || 0,
+          discount_pct: existingOrder.discount_pct,
+          cgst_pct: existingOrder.cgst_pct,
+          sgst_pct: existingOrder.sgst_pct,
+          igst_pct: existingOrder.igst_pct,
+          shipping_charge: existingOrder.shipping_charge,
+          items: existingOrder.items || [],
+          notes: existingOrder.notes,
+          terms_conditions: existingOrder.terms_conditions,
+        }
+        previousVersions.push(snapshot)
 
-      toast.success('Order Worksheet initialized successfully!', { id: toastId })
-      // Navigate to order detail page (checklist step)
+        order = await saveOrder({
+          ...existingOrder,
+          version_number: currentVerNumber + 1,
+          previous_versions: previousVersions,
+          deal_id: selectedDeal.id,
+          deal_number: selectedDeal.deal_number,
+          title: selectedDeal.title,
+          customer_name: selectedDeal.customer_name,
+          customer_id: selectedDeal.customer_id,
+          sales_rep_id: selectedDeal.created_by || user.id,
+          sales_rep_name: selectedDeal.creator?.full_name || user.full_name,
+          oem: oem.trim(),
+          quote_number: selectedDeal.quote_number || null,
+          supplier_name: supplierName.trim(),
+          contact_person: contactPerson.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          quoted_value: total,
+          payment_terms: paymentTerms.trim(),
+          expected_delivery_date: expectedDeliveryDate.trim(),
+          vendor_address: vendorAddress.trim(),
+          ops_owner: opsOwner,
+          items: poItems.map(item => ({
+            sku: item.product_name.replace(/\s+/g, '-').toUpperCase(),
+            product_name: item.product_name,
+            quantity: item.quantity,
+            transfer_price: item.transfer_price,
+            quoted_price: item.quoted_price || item.transfer_price,
+            unit_of_measure: 'EA'
+          })),
+          discount_pct: poDiscountPct,
+          cgst_pct: poCgstPct,
+          sgst_pct: poSgstPct,
+          igst_pct: poIgstPct,
+          shipping_charge: poShipping,
+          notes: poNotes,
+          terms_conditions: poTerms
+        }, user.id)
+
+        toast.success(`Order ${order.order_number} updated to Version ${order.version_number}!`, { id: toastId })
+      } else {
+        order = await saveOrder({
+          deal_id: selectedDeal.id,
+          deal_number: selectedDeal.deal_number,
+          title: selectedDeal.title,
+          customer_name: selectedDeal.customer_name,
+          customer_id: selectedDeal.customer_id,
+          sales_rep_id: selectedDeal.created_by || user.id,
+          sales_rep_name: selectedDeal.creator?.full_name || user.full_name,
+          version_number: 1,
+          oem: oem.trim(),
+          quote_number: selectedDeal.quote_number || null,
+          supplier_name: supplierName.trim(),
+          supplier_invoice: '',
+          contact_person: contactPerson.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          quoted_value: total,
+          payment_terms: paymentTerms.trim(),
+          expected_delivery_date: expectedDeliveryDate.trim(),
+          vendor_address: vendorAddress.trim(),
+          ops_owner: opsOwner,
+          items: poItems.map(item => ({
+            sku: item.product_name.replace(/\s+/g, '-').toUpperCase(),
+            product_name: item.product_name,
+            quantity: item.quantity,
+            transfer_price: item.transfer_price,
+            quoted_price: item.quoted_price || item.transfer_price,
+            unit_of_measure: 'EA'
+          })),
+          discount_pct: poDiscountPct,
+          cgst_pct: poCgstPct,
+          sgst_pct: poSgstPct,
+          igst_pct: poIgstPct,
+          shipping_charge: poShipping,
+          notes: poNotes,
+          terms_conditions: poTerms
+        }, user.id)
+
+        toast.success('Order Worksheet initialized successfully!', { id: toastId })
+      }
+      // Navigate to order detail page
       navigate(`/orders/${order.id}`)
     } catch (e: any) {
       console.error(e)
-      toast.error(e.message || 'Failed to create order.', { id: toastId })
+      toast.error(e.message || 'Failed to create/update order.', { id: toastId })
     } finally {
       setSubmitting(false)
     }
@@ -328,14 +410,31 @@ export function OrderNewPage() {
                 className="w-full mt-1.5 h-10 px-3 border border-border rounded-md bg-slate-50/50 text-xs font-semibold focus-visible:ring-1 focus-visible:ring-primary focus-visible:bg-white focus:outline-none"
               >
                 <option value="">-- Choose Approved Quote --</option>
-                {approvedDeals.map((deal) => (
-                  <option key={deal.id} value={deal.id}>
-                    {deal.quote_number ? `${deal.quote_number} (Ref: ${deal.deal_number})` : deal.deal_number} — {deal.title} ({deal.customer_name})
-                  </option>
-                ))}
+                {approvedDeals.map((deal) => {
+                  const existing = allExistingOrders.find((o) => o.deal_id === deal.id)
+                  const vNum = existing?.version_number || 1
+                  return (
+                    <option key={deal.id} value={deal.id}>
+                      {deal.quote_number ? `${deal.quote_number} (Ref: ${deal.deal_number})` : deal.deal_number} — {deal.title} ({deal.customer_name})
+                      {existing ? ` [Order v${vNum} Exists ➔ Setup v${vNum + 1}]` : ''}
+                    </option>
+                  )
+                })}
               </select>
             )}
           </div>
+
+          {existingOrder && (
+            <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-xs space-y-1.5 text-left">
+              <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
+                <Layers className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>Re-Approved Deal Selected — Order Version {(existingOrder.version_number || 1) + 1} Setup</span>
+              </div>
+              <p className="text-amber-800 dark:text-amber-300">
+                Order <strong className="font-mono">{existingOrder.order_number}</strong> is currently at Version {existingOrder.version_number || 1}. Submitting this form will update the order to <strong className="font-bold">Version {(existingOrder.version_number || 1) + 1}</strong> with the re-approved commercial items and automatically preserve Version {existingOrder.version_number || 1} in the version history audit log.
+              </p>
+            </div>
+          )}
 
           {selectedDeal && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted/30 border border-border/50 rounded-lg p-4 text-xs mt-4">
