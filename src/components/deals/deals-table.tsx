@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { EmptyState } from '@/components/shared/empty-state'
+import { SlaTimer } from '@/components/shared/sla-timer'
 import { deleteDeal } from '@/services/deals-service'
 import { removeDeal } from '@/store/deals-slice'
 import { toast } from 'sonner'
@@ -193,7 +194,10 @@ export function DealsTable({
         accessorKey: 'status',
         header: 'Status',
         cell: ({ row }) => (
-          <StatusPill status={row.original.status} />
+          <div className="flex flex-col gap-1 items-start">
+            <StatusPill status={row.original.status} />
+            <SlaTimer deal={row.original} compact />
+          </div>
         ),
       },
       {

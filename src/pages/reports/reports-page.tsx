@@ -16,6 +16,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchOrders } from '@/services/orders-service'
+import { fetchDeals } from '@/services/deals-service'
+import { downloadMonthlyReportPDF } from '@/lib/monthly-report-pdf'
 import { fetchTargets, fetchSettings } from '@/services/targets-service'
 import { fetchUsers } from '@/services/users-service'
 import type { Order, SalesTarget, SalesSettings, User as UserProfile } from '@/types'
@@ -367,9 +369,28 @@ export function ReportsPage() {
               </select>
             </div>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const toastId = toast.loading('Generating Monthly Executive PDF Report...')
+              try {
+                const deals = await fetchDeals(user.role, user.id)
+                const currentMonth = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+                await downloadMonthlyReportPDF(currentMonth, deals, myOrders)
+                toast.success('Monthly PDF Report downloaded!', { id: toastId })
+              } catch (e: any) {
+                toast.error('Failed to generate PDF report: ' + (e.message || e), { id: toastId })
+              }
+            }}
+            className="h-9 text-xs gap-1.5 font-semibold border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 cursor-pointer shadow-sm"
+          >
+            <FileDown className="h-4 w-4 text-indigo-600" />
+            Monthly PDF Report
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 text-xs gap-1.5 font-semibold">
             <FileDown className="h-4 w-4" />
-            <span>Export CSV</span>
+            Export CSV
           </Button>
           <Button variant="outline" size="icon" onClick={load} title="Refresh" className="h-9 w-9">
             <RefreshCw className="h-4 w-4" />

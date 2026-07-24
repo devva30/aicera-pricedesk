@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Package, RefreshCw, ChevronRight, ChevronDown, Search, Trash2, Calendar, AlertTriangle } from 'lucide-react'
+import { Plus, Package, RefreshCw, ChevronRight, ChevronDown, Search, Trash2, Calendar, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchOrders, saveOrder, deleteOrder } from '@/services/orders-service'
+import { exportOrdersToExcel } from '@/lib/excel-exporter'
 import type { Order } from '@/types'
 import {
   Dialog,
@@ -298,6 +299,15 @@ export function OrdersListPage() {
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Button variant="outline" size="icon" onClick={loadOrders} title="Refresh list" className="h-9 w-9">
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportOrdersToExcel(filteredOrders)}
+            className="h-9 text-xs font-semibold px-3 gap-1.5 border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            Export Excel
           </Button>
           {(user.role === 'sales_rep' || user.role === 'finance' || user.role === 'admin') && (
             <>

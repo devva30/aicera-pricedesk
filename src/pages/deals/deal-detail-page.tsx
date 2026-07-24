@@ -11,6 +11,7 @@ import { PipelineTracker } from '@/components/approval/pipeline-tracker'
 import { ApprovalActions } from '@/components/deals/approval-actions'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthStore } from '@/stores/auth-store'
+import { SlaTimer } from '@/components/shared/sla-timer'
 import { fetchDealAudit, fetchDealById, fetchQuotesByDealId, deleteDeal, deleteQuote } from '@/services/deals-service'
 import { updateDeal, removeDeal } from '@/store/deals-slice'
 import { Fragment } from 'react'
@@ -346,9 +347,10 @@ export function DealDetailPage() {
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                   {isQuoteView ? 'Customer Quote' : 'Pricing Deal'}
                 </span>
-                <Badge variant={statusVariant[deal.status] ?? 'warning'}>
+                <Badge variant={DEAL_STATUS_VARIANTS[deal.status]} className="text-[11px] font-semibold px-2.5 py-0.5 shadow-sm uppercase tracking-wider">
                   {DEAL_STATUS_LABELS[deal.status]}
                 </Badge>
+                <SlaTimer deal={deal} />
               </div>
               <h1 className="text-2xl font-bold font-display tracking-tight text-foreground mt-0.5">{deal.title}</h1>
             </div>

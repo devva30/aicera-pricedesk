@@ -1,12 +1,13 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Layers, RefreshCw } from 'lucide-react'
+import { Plus, Layers, RefreshCw, FileSpreadsheet } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Button } from '@/components/ui/button'
 import { DealsTable } from '@/components/deals/deals-table'
 import { useAuthStore } from '@/stores/auth-store'
 import { setDeals, setLoading } from '@/store/deals-slice'
 import { fetchDeals } from '@/services/deals-service'
+import { exportDealsToExcel } from '@/lib/excel-exporter'
 import type { RootState } from '@/store'
 import { formatCurrency } from '@/lib/utils'
 
@@ -65,6 +66,15 @@ export function DealsListPage() {
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <Button variant="outline" size="icon" onClick={loadData} title="Refresh list" className="h-9 w-9">
             <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportDealsToExcel(actualDeals)}
+            className="h-9 text-xs font-semibold px-3 gap-1.5 border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 cursor-pointer"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            Export Excel
           </Button>
           {(user.role === 'sales_rep' || user.role === 'admin') && (
             <Button onClick={() => navigate('/deals/new')} size="sm" className="h-9 text-xs font-semibold px-4">
