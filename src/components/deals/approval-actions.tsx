@@ -31,6 +31,7 @@ type ActionType = 'approve' | 'reject' | 'changes' | 'submit' | null
 export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalActionsProps) {
   const [action, setAction] = useState<ActionType>(null)
   const [comment, setComment] = useState('')
+  const [opsOwner, setOpsOwner] = useState(deal.assigned_ops_owner || 'Chetan')
   const [loading, setLoading] = useState(false)
 
   const canAct = canUserActOnDeal(userRole, deal.status)
@@ -57,9 +58,10 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
             userId,
             deal.status,
             deal.requires_technical,
-            comment
+            comment,
+            opsOwner
           )
-          toast.success('Deal approved')
+          toast.success(`Deal approved & Ops assigned to ${opsOwner}`)
           break
         case 'reject':
           updated = await rejectDeal(deal.id, userId, comment)
@@ -191,9 +193,30 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
               </p>
             )}
             {action === 'approve' && (
-              <p className="text-[11px] text-muted-foreground mt-2">
-                Confirm approval to advance to the next stage.
-              </p>
+              <div className="space-y-3 mt-3">
+                {(userRole === 'sales_head' || userRole === 'admin' || deal.status === 'pending_sales_head') && (
+                  <div className="rounded-lg border border-sky-500/20 bg-sky-50/50 dark:bg-sky-950/20 p-3 space-y-1.5 text-left">
+                    <Label className="text-xs font-bold text-sky-950 dark:text-sky-200">
+                      Assign Ops Executive (Sales Ops) *
+                    </Label>
+                    <select
+                      value={opsOwner}
+                      onChange={(e) => setOpsOwner(e.target.value)}
+                      className="h-9 w-full rounded-md border border-sky-300 dark:border-sky-700 bg-background px-3 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-foreground font-semibold cursor-pointer"
+                    >
+                      <option value="Chetan">Chetan</option>
+                      <option value="Bhoomika">Bhoomika</option>
+                      <option value="Deekshit">Deekshit</option>
+                    </select>
+                    <p className="text-[11px] text-muted-foreground">
+                      This Ops Executive will be pre-assigned when the Sales Rep sets up the order for this deal.
+                    </p>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Confirm approval to advance to the next stage.
+                </p>
+              </div>
             )}
             {(action === 'reject' || action === 'changes') && (
               <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">

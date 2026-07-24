@@ -125,6 +125,7 @@ export interface Deal {
   assigned_to?: string | null
   currency: string
   requires_technical: boolean
+  assigned_ops_owner?: string | null
   oem?: string | null
   quote_number?: string | null
   is_quote_only?: boolean

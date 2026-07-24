@@ -190,6 +190,10 @@ export function OrderNewPage() {
     if (deal?.oem) {
       setOem(deal.oem)
     }
+    // Pre-fill Ops Executive pre-assigned by Sales Head upon deal approval
+    if (deal?.assigned_ops_owner) {
+      setOpsOwner(deal.assigned_ops_owner)
+    }
     // Pre-populate items from the approved deal to preserve quoted price and transfer price
     if (deal && deal.items && deal.items.length > 0) {
       setPoItems(deal.items.map(item => ({

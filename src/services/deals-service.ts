@@ -730,11 +730,12 @@ export async function approveDeal(
   userId: string,
   currentStatus: DealStatus,
   requiresTechnical: boolean,
-  comment?: string
+  comment?: string,
+  assignedOpsOwner?: string
 ): Promise<Deal> {
   const next = getNextStatus(currentStatus, requiresTechnical)
   if (!next) throw new Error('Cannot approve from current status')
-  return transitionDeal(dealId, next, 'approved', userId, comment || 'Approved')
+  return transitionDeal(dealId, next, 'approved', userId, comment || 'Approved', assignedOpsOwner)
 }
 
 export async function rejectDeal(
@@ -842,7 +843,8 @@ async function transitionDeal(
   toStatus: DealStatus,
   action: string,
   userId: string,
-  comment: string
+  comment: string,
+  assignedOpsOwner?: string
 ): Promise<Deal> {
   if (useAuthStore.getState().isDemo) {
     const isQuote = MOCK_QUOTES.some((q) => q.id === dealId)
@@ -858,6 +860,7 @@ async function transitionDeal(
       ...deal,
       status: toStatus,
       updated_at: new Date().toISOString(),
+      ...(assignedOpsOwner ? { assigned_ops_owner: assignedOpsOwner } : {}),
       ...(toStatus === 'approved' ? {
         approved_at: new Date().toISOString(),
         approved_by: comment?.includes('Auto-approved') ? 'System (Auto-Approved)' : (actorUser?.full_name ?? 'Sales Head')
@@ -1029,6 +1032,7 @@ async function transitionDeal(
     ...deal,
     status: toStatus,
     updated_at: new Date().toISOString(),
+    ...(assignedOpsOwner ? { assigned_ops_owner: assignedOpsOwner } : {}),
     ...(toStatus === 'approved' ? {
       approved_at: new Date().toISOString(),
       approved_by: comment?.includes('Auto-approved') ? 'System (Auto-Approved)' : (actorUser?.full_name ?? 'Sales Head')

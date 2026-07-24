@@ -639,6 +639,10 @@ export function DealDetailPage() {
                                   <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Approval Date</span>
                                   <span className="font-semibold text-foreground font-mono">{deal.approved_at ? formatDate(deal.approved_at) : '—'}</span>
                                 </div>
+                                <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
+                                  <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Ops Executive</span>
+                                  <span className="font-semibold text-primary">{deal.assigned_ops_owner || 'Auto-Assigned on PO'}</span>
+                                </div>
                               </>
                             )}
                           </>
