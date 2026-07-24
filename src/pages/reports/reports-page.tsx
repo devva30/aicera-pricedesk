@@ -373,6 +373,7 @@ export function ReportsPage() {
             variant="outline"
             size="sm"
             onClick={async () => {
+              if (!user) return
               const toastId = toast.loading('Generating Monthly Executive PDF Report...')
               try {
                 const deals = await fetchDeals(user.role, user.id)

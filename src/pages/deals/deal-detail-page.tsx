@@ -28,6 +28,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 
+const DEAL_STATUS_VARIANTS: Record<string, "default" | "secondary" | "success" | "warning" | "danger" | "outline"> = {
+  draft: 'secondary',
+  pending_technical: 'warning',
+  pending_finance: 'warning',
+  pending_sales_head: 'warning',
+  approved: 'success',
+  rejected: 'danger',
+  changes_requested: 'warning',
+}
+
 export function DealDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
