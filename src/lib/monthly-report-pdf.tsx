@@ -32,10 +32,24 @@ interface MonthlyReportPDFProps {
   orders: Order[]
 }
 
+function formatPdfCurrency(value: number): string {
+  if (!value || isNaN(value)) return 'Rs. 0'
+  return `Rs. ${Math.round(value).toLocaleString('en-IN')}`
+}
+
+function getDealValue(d: Deal): number {
+  if (typeof d.total_revenue === 'number' && d.total_revenue > 0) return d.total_revenue
+  if (typeof d.quoted_value === 'number' && d.quoted_value > 0) return d.quoted_value
+  if (Array.isArray(d.items)) {
+    return d.items.reduce((s, i) => s + (i.quoted_price || 0) * (i.quantity || 0), 0)
+  }
+  return 0
+}
+
 export function MonthlyReportDocument({ monthName, deals, orders }: MonthlyReportPDFProps) {
   const approvedDeals = deals.filter((d) => d.status === 'approved')
-  const totalQuoted = deals.reduce((s, d) => s + (d.quoted_value || 0), 0)
-  const approvedValue = approvedDeals.reduce((s, d) => s + (d.quoted_value || 0), 0)
+  const totalQuoted = deals.reduce((s, d) => s + getDealValue(d), 0)
+  const approvedValue = approvedDeals.reduce((s, d) => s + getDealValue(d), 0)
   const closedOrders = orders.filter((o) => o.order_status === 'Closed')
   const winRate = deals.length > 0 ? Math.round((approvedDeals.length / deals.length) * 100) : 0
 
@@ -52,11 +66,11 @@ export function MonthlyReportDocument({ monthName, deals, orders }: MonthlyRepor
         <View style={styles.kpiRow}>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiLabel}>Total Pipeline</Text>
-            <Text style={styles.kpiValue}>{formatCurrency(totalQuoted)}</Text>
+            <Text style={styles.kpiValue}>{formatPdfCurrency(totalQuoted)}</Text>
           </View>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiLabel}>Approved Revenue</Text>
-            <Text style={styles.kpiValue}>{formatCurrency(approvedValue)}</Text>
+            <Text style={styles.kpiValue}>{formatPdfCurrency(approvedValue)}</Text>
           </View>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiLabel}>Win Rate</Text>
@@ -83,7 +97,7 @@ export function MonthlyReportDocument({ monthName, deals, orders }: MonthlyRepor
                 <Text style={[styles.tableCell, styles.colNarrow]}>{d.deal_number}</Text>
                 <Text style={[styles.tableCell, styles.colWide]}>{d.customer_name} — {d.title}</Text>
                 <Text style={[styles.tableCell, styles.colNarrow]}>{d.status.toUpperCase()}</Text>
-                <Text style={[styles.tableCell, styles.colMedium]}>{formatCurrency(d.quoted_value || 0)}</Text>
+                <Text style={[styles.tableCell, styles.colMedium]}>{formatPdfCurrency(getDealValue(d))}</Text>
               </View>
             ))}
           </View>
