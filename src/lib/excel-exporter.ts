@@ -21,7 +21,7 @@ export function exportDealsToExcel(deals: Deal[], filename = 'PriceDesk_Deals_Ex
     </style>
   </head>
   <body>
-    <div class="header-title">PriceDesk 2.0 — Commercial Deals Worksheet Export</div>
+    <div class="header-title">PriceDesk — Commercial Deals Worksheet Export</div>
     <div class="sub-title">Generated on: ${dateStr} | Records: ${deals.length} deals</div>
     <table>
       <thead>
@@ -114,7 +114,7 @@ export function exportOrdersToExcel(orders: Order[], filename = 'PriceDesk_Order
     </style>
   </head>
   <body>
-    <div class="header-title">PriceDesk 2.0 — Execution & Orders Worksheet Export</div>
+    <div class="header-title">PriceDesk — Execution & Orders Worksheet Export</div>
     <div class="sub-title">Generated on: ${dateStr} | Records: ${orders.length} order(s)</div>
     <table>
       <thead>

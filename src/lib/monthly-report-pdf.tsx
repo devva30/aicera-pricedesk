@@ -44,7 +44,7 @@ export function MonthlyReportDocument({ monthName, deals, orders }: MonthlyRepor
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>PriceDesk 2.0 — Executive Monthly Report</Text>
+          <Text style={styles.headerTitle}>PriceDesk — Executive Monthly Report</Text>
           <Text style={styles.headerSub}>Period: {monthName} | Generated: {new Date().toLocaleDateString('en-IN')}</Text>
         </View>
 
