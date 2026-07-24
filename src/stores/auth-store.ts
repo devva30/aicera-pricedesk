@@ -166,7 +166,7 @@ export const useAuthStore = create<AuthState>()(
               finance: 'Finance Reviewer',
               technical: 'Tech Reviewer',
               sales_head: 'Sales Head',
-              ops: 'Sales Ops',
+              ops: 'Ops Executive',
             }
             const expectedLabel = roleLabels[profile.role] || profile.role
             const requestedLabel = roleLabels[role] || role

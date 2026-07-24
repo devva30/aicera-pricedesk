@@ -377,7 +377,7 @@ export function OrdersListPage() {
                   <th className="p-4">Customer Name</th>
                   <th className="p-4">OEM</th>
                   {user.role !== 'sales_rep' && <th className="p-4">Sales Rep</th>}
-                  <th className="p-4">Sales Ops</th>
+                  <th className="p-4">Ops Executive</th>
                   <th className="p-4">Execution Progress</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Actions</th>

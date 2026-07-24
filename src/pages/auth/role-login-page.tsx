@@ -142,7 +142,7 @@ const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
     ],
   },
   ops: {
-    title: 'Sales Ops',
+    title: 'Ops Executive',
     subtitle: 'Operations & Procurement Portal',
     description: 'Track order fulfillment, verify supplier specifications, and update delivery gates.',
     icon: ClipboardList,

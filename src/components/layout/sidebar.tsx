@@ -122,7 +122,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed = false }: SidebarProps) 
     technical: 'Technical Team',
     sales_head: 'Sales Head',
     admin: 'Admin',
-    ops: 'Sales Ops',
+    ops: 'Ops Executive',
   }
 
   return (

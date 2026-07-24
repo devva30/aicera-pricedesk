@@ -427,7 +427,7 @@ export function DashboardPage() {
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Welcome back</span>
                 <Badge variant="outline" className="font-semibold text-[10px] py-0.5 px-2 bg-primary/5 text-primary border-primary/20">
-                  {user?.role === 'sales_rep' ? 'Sales Rep' : user?.role === 'admin' ? 'Admin' : user?.role === 'sales_head' ? 'Sales Head' : user?.role === 'ops' ? 'Sales Ops' : user?.role || 'Member'}
+                  {user?.role === 'sales_rep' ? 'Sales Rep' : user?.role === 'admin' ? 'Admin' : user?.role === 'sales_head' ? 'Sales Head' : user?.role === 'ops' ? 'Ops Executive' : user?.role || 'Member'}
                 </Badge>
               </div>
               <h1 className="text-2xl font-bold font-display tracking-tight text-foreground mt-1">

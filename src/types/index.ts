@@ -287,7 +287,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   technical: 'Technical',
   finance: 'Finance',
   sales_head: 'Sales Head',
-  ops: 'Sales Ops',
+  ops: 'Ops Executive',
   admin: 'Admin',
 }
 

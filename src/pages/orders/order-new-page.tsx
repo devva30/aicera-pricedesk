@@ -464,7 +464,7 @@ export function OrderNewPage() {
                   </div>
                 </div>
                 <div className="lg:col-span-2">
-                  <Label htmlFor="opsOwner" className="text-xs font-semibold text-muted-foreground">Sales Ops *</Label>
+                  <Label htmlFor="opsOwner" className="text-xs font-semibold text-muted-foreground">Ops Executive *</Label>
                   <select
                     id="opsOwner"
                     value={opsOwner}

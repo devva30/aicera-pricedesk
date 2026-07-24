@@ -40,7 +40,7 @@ const ROLES = [
   { value: 'technical',  label: 'Tech Reviewer',   icon: Wrench       },
   { value: 'finance',    label: 'Finance Reviewer', icon: Wallet      },
   { value: 'sales_head', label: 'Sales Head',       icon: ClipboardCheck },
-  { value: 'ops',        label: 'Sales Ops',        icon: ClipboardList },
+  { value: 'ops',        label: 'Ops Executive',    icon: ClipboardList },
   { value: 'admin',      label: 'Admin',            icon: Settings    },
 ]
 
@@ -59,7 +59,7 @@ const DEMO_ROLES: {
   { role: 'technical',  key: 'technical', label: 'Tech Review',       name: 'Vikram Patel', icon: Wrench,        color: 'text-violet-600',  bg: 'bg-violet-500/10 border-violet-500/20 hover:bg-violet-500/20' },
   { role: 'finance',    key: 'finance',   label: 'Finance Review',    name: 'Priya Sharma', icon: Wallet,        color: 'text-emerald-600', bg: 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20' },
   { role: 'sales_head', key: 'sales_head',label: 'Sales Head / VP',  name: 'Ananya Iyer',  icon: ClipboardCheck, color: 'text-amber-600', bg: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20'    },
-  { role: 'ops',        key: 'chetan',    label: 'Sales Ops',         name: 'Chetan',       icon: ClipboardList, color: 'text-sky-600',   bg: 'bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/20' },
+  { role: 'ops',        key: 'chetan',    label: 'Ops Executive',     name: 'Chetan',       icon: ClipboardList, color: 'text-sky-600',   bg: 'bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/20' },
   { role: 'admin',      key: 'admin',     label: 'System Admin',      name: 'Rahul Kapoor', icon: Settings,      color: 'text-foreground',  bg: 'bg-muted border-border hover:bg-muted/80'    },
 ]
 

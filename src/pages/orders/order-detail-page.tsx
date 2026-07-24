@@ -508,7 +508,7 @@ export function OrderDetailPage() {
 
   const handleUpdateOpsOwner = async (owner: string) => {
     if (!order) return
-    const toastId = toast.loading('Assigning Sales Ops...')
+    const toastId = toast.loading('Assigning Ops Executive...')
     try {
       const updated = await saveOrder({
         ...order,
@@ -518,7 +518,7 @@ export function OrderDetailPage() {
       toast.success(`Assigned to ${owner || 'Unassigned'} successfully.`, { id: toastId })
     } catch (e) {
       console.error(e)
-      toast.error('Failed to update Sales Ops.', { id: toastId })
+      toast.error('Failed to update Ops Executive.', { id: toastId })
     }
   }
 
@@ -1132,9 +1132,9 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Sales Ops Dropdown */}
+        {/* Ops Executive Dropdown */}
         <div className="text-left space-y-1.5">
-          <label htmlFor="ops-owner" className="text-xs font-bold text-slate-500">SALES OPS</label>
+          <label htmlFor="ops-owner" className="text-xs font-bold text-slate-500">OPS EXECUTIVE</label>
           {user.role === 'ops' || user.role === 'admin' || user.role === 'sales_head' ? (
             <select
               id="ops-owner"
@@ -1976,7 +1976,7 @@ export function OrderDetailPage() {
                 {user.role === 'sales_rep' && (
                   <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded flex items-center gap-1.5 shrink-0">
                     <ShieldAlert className="h-3.5 w-3.5" />
-                    Read Only (Only Sales Ops / Admin can check-off)
+                    Read Only (Only Ops Executive / Admin can check-off)
                   </span>
                 )}
               </div>
