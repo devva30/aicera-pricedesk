@@ -568,16 +568,22 @@ export function OrderNewPage() {
                 </div>
                 <div className="lg:col-span-2">
                   <Label htmlFor="opsOwner" className="text-xs font-semibold text-muted-foreground">Ops Executive *</Label>
-                  <select
-                    id="opsOwner"
-                    value={opsOwner}
-                    onChange={(e) => setOpsOwner(e.target.value)}
-                    className="mt-1.5 h-10 w-full rounded-md border border-border bg-slate-50/50 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
-                  >
-                    <option value="Chetan">Chetan</option>
-                    <option value="Bhoomika">Bhoomika</option>
-                    <option value="Deekshit">Deekshit</option>
-                  </select>
+                  {user?.role === 'admin' || user?.role === 'sales_head' ? (
+                    <select
+                      id="opsOwner"
+                      value={opsOwner}
+                      onChange={(e) => setOpsOwner(e.target.value)}
+                      className="mt-1.5 h-10 w-full rounded-md border border-border bg-slate-50/50 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-semibold cursor-pointer"
+                    >
+                      <option value="Chetan">Chetan</option>
+                      <option value="Bhoomika">Bhoomika</option>
+                      <option value="Deekshit">Deekshit</option>
+                    </select>
+                  ) : (
+                    <div className="mt-1.5 h-10 w-full rounded-md border border-border bg-slate-100/70 px-3 flex items-center text-xs font-bold text-slate-700 select-none">
+                      {opsOwner || 'Auto-Assigned'}
+                    </div>
+                  )}
                 </div>
               </div>
 
