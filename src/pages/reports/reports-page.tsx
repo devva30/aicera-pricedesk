@@ -25,6 +25,7 @@ import type { Order, SalesTarget, SalesSettings, User as UserProfile } from '@/t
 import { formatCurrency, formatCurrencyCompact, formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import { exportReportToExcel } from '@/lib/excel-exporter'
+import { EmptyState } from '@/components/shared/empty-state'
 
 type ReportTab = 'revenue' | 'margin' | 'incentive' | 'sales' | 'pending' | 'completed' | 'business'
 

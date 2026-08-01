@@ -126,6 +126,7 @@ export interface Deal {
   currency: string
   requires_technical: boolean
   assigned_ops_owner?: string | null
+  ops_owner?: string | null
   oem?: string | null
   quote_number?: string | null
   is_quote_only?: boolean
@@ -143,6 +144,7 @@ export interface Deal {
   items?: DealItem[]
   overheads?: DealOverhead[]
   previous_versions?: DealVersion[]
+  version_number?: number
   discount_pct?: number
   cgst_pct?: number
   sgst_pct?: number
@@ -187,6 +189,8 @@ export interface DealItem {
   deal_id?: string
   sku: string
   product_name: string
+  part_number?: string
+  oem?: string
   quantity: number
   unit_of_measure: string
   transfer_price: number
@@ -304,6 +308,19 @@ export interface Customer {
   id: string
   name: string
   created_at: string
+  contact_name?: string
+  contact_email?: string
+  contact_phone?: string
+  billing_street?: string
+  billing_city?: string
+  billing_state?: string
+  billing_code?: string
+  billing_country?: string
+  shipping_street?: string
+  shipping_city?: string
+  shipping_state?: string
+  shipping_code?: string
+  shipping_country?: string
 }
 
 // ─── M4: Sales Settings (global config, admin-only) ──────────────────────────

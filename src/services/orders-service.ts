@@ -408,7 +408,7 @@ function getMockOrders(): Order[] {
         const deal = MOCK_DEALS.find((d) => d.id === o.deal_id)
         if (deal && deal.items && deal.items.length > 0) {
           healedItems = (o.items || []).map((item: DealItem) => {
-            const matchedDealItem = deal.items.find(
+            const matchedDealItem = deal.items?.find(
               (di) => di.product_name.toLowerCase() === item.product_name.toLowerCase()
             )
             if (matchedDealItem && (item.quoted_price === item.transfer_price || !item.quoted_price)) {

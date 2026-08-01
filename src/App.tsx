@@ -126,6 +126,14 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="quotes/new"
+          element={
+            <ProtectedRoute roles={['sales_rep', 'admin']}>
+              <QuoteNewPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="quotes/:id" element={<DealDetailPage />} />
         <Route
           path="quotes/:id/edit"

@@ -35,8 +35,9 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const navigate  = useNavigate()
   const user      = useAuthStore((s) => s.user)
   const logout    = useAuthStore((s) => s.logout)
+  const isDemo    = useAuthStore((s) => s.isDemo)
   const { theme, setTheme, applyTheme } = useThemeStore()
-  const { notifications, fetchNotifications, markAsRead, unreadCount } = useNotificationStore()
+  const { notifications, fetchNotifications, subscribeToLiveNotifications, markAsRead, unreadCount } = useNotificationStore()
 
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(() => {
     return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
@@ -48,8 +49,19 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
   useEffect(() => {
     applyTheme()
-    if (user) fetchNotifications(user.id)
-  }, [user, applyTheme, fetchNotifications])
+    if (!user) return
+
+    if (isDemo) {
+      // Demo mode: initial load + 2 s poll for event-bus updates
+      fetchNotifications(user.id)
+      const pollId = setInterval(() => fetchNotifications(user.id), 2000)
+      return () => clearInterval(pollId)
+    } else {
+      // Live mode: Firestore onSnapshot real-time listener — instant updates
+      const unsubscribe = subscribeToLiveNotifications(user.id)
+      return () => { if (unsubscribe) unsubscribe() }
+    }
+  }, [user, isDemo, applyTheme, fetchNotifications, subscribeToLiveNotifications])
 
   const initials = user?.full_name
     ?.split(' ')
@@ -110,6 +122,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
     try {
       await approveDeal(notif.deal_id, user.id, 'pending_sales_head', false, 'Approved via quick notification action', 'Chetan')
       markAsRead(notif.id)
+      // Refresh bell so approved-deal notification for Sales Rep is persisted and current user's list is updated
+      await fetchNotifications(user.id)
       toast.success('Deal approved successfully & Ops Executive assigned!', { id: toastId })
     } catch (err: any) {
       toast.error(err.message || 'Failed to approve deal', { id: toastId })
@@ -235,53 +249,62 @@ export function Header({ onMenuToggle }: HeaderProps) {
                     No new notifications. Everything is up to date!
                   </div>
                 ) : (
-                  notifications.slice(0, 6).map((n) => (
-                    <div
-                      key={n.id}
-                      className={`p-3 text-left transition-colors ${n.is_read ? 'bg-background hover:bg-muted/30' : 'bg-primary/5 hover:bg-primary/10'}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            {!n.is_read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
-                            <span className={`text-xs ${n.is_read ? 'font-medium text-foreground' : 'font-bold text-foreground'}`}>
-                              {n.title}
-                            </span>
+                  notifications.slice(0, 6).map((n) => {
+                    const isQuoteNotif = n.title?.includes('Quotation') || n.title?.includes('Quote') || n.title?.includes('QT-') || n.message?.includes('QT-') || n.message?.includes('Quotation') || n.message?.includes('Quote')
+                    const targetPath = isQuoteNotif ? `/quotes/${n.deal_id}` : `/deals/${n.deal_id}`
+
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          markAsRead(n.id)
+                          if (n.deal_id) navigate(targetPath)
+                        }}
+                        className={`p-3 text-left transition-colors cursor-pointer ${n.is_read ? 'bg-background hover:bg-muted/30' : 'bg-primary/5 hover:bg-primary/10'}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {!n.is_read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                              <span className={`text-xs ${n.is_read ? 'font-medium text-foreground' : 'font-bold text-foreground'}`}>
+                                {n.title}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-1 leading-snug line-clamp-2">{n.message}</p>
+                            <span className="text-[10px] font-semibold text-slate-400 mt-1 block">{formatRelative(n.created_at)}</span>
                           </div>
-                          <p className="text-[11px] text-muted-foreground mt-1 leading-snug line-clamp-2">{n.message}</p>
-                          <span className="text-[10px] font-semibold text-slate-400 mt-1 block">{formatRelative(n.created_at)}</span>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              markAsRead(n.id)
+                            }}
+                            className="h-6 w-6 shrink-0 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                            title="Mark as read"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            markAsRead(n.id)
-                          }}
-                          className="h-6 w-6 shrink-0 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                          title="Mark as read"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-
-                      {/* Interactive Action Buttons */}
-                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
-                        {n.deal_id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              markAsRead(n.id)
-                              navigate(`/deals/${n.deal_id}`)
-                            }}
-                            className="h-7 text-[10px] font-semibold px-2.5 gap-1 border-border text-foreground hover:bg-muted cursor-pointer"
-                          >
-                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                            View Details
-                          </Button>
-                        )}
+                        {/* Interactive Action Buttons */}
+                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40">
+                          {n.deal_id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                markAsRead(n.id)
+                                navigate(targetPath)
+                              }}
+                              className="h-7 text-[10px] font-semibold px-2.5 gap-1 border-border text-foreground hover:bg-muted cursor-pointer"
+                            >
+                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                              View Details
+                            </Button>
+                          )}
 
                         {(user?.role === 'sales_head' || user?.role === 'admin') && n.type === 'approval' && n.deal_id && (
                           <Button
@@ -295,7 +318,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
                         )}
                       </div>
                     </div>
-                  ))
+                  )
+                })
                 )}
               </div>
 

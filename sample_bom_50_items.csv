@@ -1,0 +1,33 @@
+Networking,Transceivers,25G SFP28 SR Transceiver Module,16,MMS1V00-WM,Mellanox
+Networking,DAC Cables,100G QSFP28 to QSFP28 3m Passive DAC Cable,6,MCP1600-C003,Mellanox
+Networking,DAC Cables,25G SFP28 to SFP28 2m Passive DAC Cable,12,MCP2M00-A002,Mellanox
+Power & Thermal,Power Supply,3000W Titanium Redundant Power Supply,4,PWS-3K01-1R,Supermicro
+Power & Thermal,Power Supply,2000W Platinum Hot-Plug Power Supply,4,PWS-2K02-1R,Supermicro
+Power & Thermal,Cooling,High-RPM Heavy Duty Server Cooling Fan 80mm,12,FAN-0180L4,Supermicro
+Power & Thermal,Cooling,Closed-Loop Liquid Cooling Kit Dual Socket,2,CLC-SP5-2026,CoolerMaster
+Chassis & Infrastructure,Chassis,4U 8-GPU Rackmount Server Chassis,1,CSE-417BE1C,Supermicro
+Chassis & Infrastructure,Chassis,2U 24-Bay NVMe Storage Chassis,1,CSE-216BE1C,Supermicro
+Chassis & Infrastructure,Rails,4U Toolless Outer Rack Rail Kit,2,MCP-290-00053,Supermicro
+Chassis & Infrastructure,PDU,30A 208V 3-Phase Smart Switched PDU,2,AP8959,APC
+Chassis & Infrastructure,UPS,5000VA 230V Online Double-Conversion UPS,1,SRT5KXLI,APC
+Peripherals,KVM,17-inch LCD Console Drawer with 8-Port KVM,1,AP5717,APC
+Software,OS,Microsoft Windows Server 2022 Datacenter 16-Core,2,P73-08328,Microsoft
+Software,OS,Red Hat Enterprise Linux Server 2-Socket Sub 3-Yr,2,RH00003,Red Hat
+Software,Hypervisor,VMware vSphere 8 Enterprise Plus 1-CPU 3-Yr,4,VS8-EPL-C,VMware
+Software,Management,NVIDIA AI Enterprise Software License 3-Yr,8,NV-AI-ENT-3Y,NVIDIA
+Security,TPM,Trusted Platform Module TPM 2.0 Security Chip,4,AOM-TPM-9670V,Supermicro
+Cables,Power Cables,C19 to C20 16A Heavy Duty Power Cord 2m,8,C19-C20-2M,Tripp Lite
+Cables,Power Cables,C13 to C14 10A Power Extension Cord 1.5m,16,C13-C14-1M,Tripp Lite
+Accessories,Thermal Paste,High Thermal Conductivity Thermal Grease 10g,4,TG-HG10,Noctua
+Accessories,Mounting,M.2 SSD Heatsink and Mounting Kit,8,M2-HSK-KIT,StarTech
+Components,Resistors,10k Ohm SMD Chip Resistor 0805,100,RC0805FR-0710KL,Yageo
+Components,Capacitors,100uF 16V Low ESR Tantalum Capacitor,50,TCJB107M016R0150,AVX
+Components,Inductors,4.7uH Shielded Power Inductor 10A,20,SPM6530T-4R7M,TDK
+Components,Diodes,Schottky Barrier Diode 40V 3A SMA,30,SS34,Micro Commercial
+Components,Transistors,N-Channel 60V 30A Logic Level MOSFET,20,IRFZ44N,Infineon
+Components,Fuses,5A 125V Fast Acting Surface Mount Fuse,10,0451005.NRL,Littelfuse
+Components,Connectors,RJ45 Shielded Gigabit Ethernet Jack 1x1,10,5462111-1,TE Connectivity
+Components,Connectors,USB 3.0 Type-A Female Board Mount Connector,10,GSB11111KEU,Amphenol
+Components,ICs,Voltage Regulator LDO 3.3V 1A SOT-223,15,AMS1117-3.3,Advanced Monolithic
+Components,ICs,EEPROM 256Kb I2C SOIC-8 Memory Chip,10,24LC256-I/SN,Microchip
+Services,Warranty,5-Year 24x7 Mission Critical Onsite Support,1,SVC-5Y-247,Enterprise Support

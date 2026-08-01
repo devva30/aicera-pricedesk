@@ -36,6 +36,7 @@ export async function sendWorkflowEmail(params: EmailParams): Promise<boolean> {
         subject: params.subject,
         message: params.message,
         deal_number: params.deal_number,
+        quote_number: params.deal_number,
         deal_title: params.deal_title,
         action_url: params.action_url,
       },

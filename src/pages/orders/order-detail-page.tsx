@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchOrderById, saveOrder, deleteOrder, deleteDeliveryChallan } from '@/services/orders-service'
+import { fetchUsers } from '@/services/users-service'
 import { fetchSettings } from '@/services/targets-service'
-import type { Order, OrderChecklist, DealItem, OrderVersion } from '@/types'
+import type { Order, OrderChecklist, DealItem, OrderVersion, User } from '@/types'
 import { cn, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import { pdf } from '@react-pdf/renderer'
@@ -339,6 +340,14 @@ export function OrderDetailPage() {
     payment_collected: false,
     remarks: {},
   })
+
+  const [opsUsers, setOpsUsers] = useState<User[]>([])
+
+  useEffect(() => {
+    fetchUsers().then(users => {
+      setOpsUsers(users.filter(u => u.role === 'ops'))
+    }).catch(err => console.error('Failed to fetch ops users:', err))
+  }, [])
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -1143,9 +1152,14 @@ export function OrderDetailPage() {
               className="h-9 w-full rounded-md border border-border bg-slate-50/50 px-3 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-bold cursor-pointer"
             >
               <option value="">Unassigned</option>
-              <option value="Chetan">Chetan</option>
-              <option value="Bhoomika">Bhoomika</option>
-              <option value="Deekshit">Deekshit</option>
+              {opsUsers.map(u => (
+                <option key={u.id} value={u.full_name}>
+                  {u.full_name} ({u.email})
+                </option>
+              ))}
+              {opsUsers.length === 0 && order.ops_owner && (
+                <option value={order.ops_owner}>{order.ops_owner}</option>
+              )}
             </select>
           ) : (
             <div className="h-9 flex items-center px-3 rounded-md border border-border bg-slate-100/50 text-xs font-bold text-muted-foreground">

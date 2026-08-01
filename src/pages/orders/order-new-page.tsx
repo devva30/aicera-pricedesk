@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchDeals } from '@/services/deals-service'
 import { saveOrder, fetchOrders } from '@/services/orders-service'
-import type { Deal, Order, OrderVersion } from '@/types'
+import { fetchUsers } from '@/services/users-service'
+import type { Deal, Order, OrderVersion, User } from '@/types'
 import { cn, formatCurrency, formatPercent, getMarginColor } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -73,8 +74,19 @@ export function OrderNewPage() {
   const [paymentTerms, setPaymentTerms] = useState('')
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('')
   const [vendorAddress, setVendorAddress] = useState('')
-  const [opsOwner, setOpsOwner] = useState('Chetan')
+  const [opsOwner, setOpsOwner] = useState('')
+  const [opsUsers, setOpsUsers] = useState<User[]>([])
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    fetchUsers().then(users => {
+      const ops = users.filter(u => u.role === 'ops')
+      setOpsUsers(ops)
+      if (ops.length > 0 && !opsOwner) {
+        setOpsOwner(ops[0].full_name)
+      }
+    }).catch(err => console.error('Failed to fetch ops users:', err))
+  }, [])
 
   const [poItems, setPoItems] = useState<Array<{ product_name: string, quantity: number, transfer_price: number, quoted_price?: number }>>([])
   const [poDiscountPct, setPoDiscountPct] = useState(0)
@@ -592,9 +604,15 @@ export function OrderNewPage() {
                       onChange={(e) => setOpsOwner(e.target.value)}
                       className="mt-1.5 h-10 w-full rounded-md border border-border bg-slate-50/50 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground font-semibold cursor-pointer"
                     >
-                      <option value="Chetan">Chetan</option>
-                      <option value="Bhoomika">Bhoomika</option>
-                      <option value="Deekshit">Deekshit</option>
+                      {opsUsers.length > 0 ? (
+                        opsUsers.map(u => (
+                          <option key={u.id} value={u.full_name}>
+                            {u.full_name} ({u.email})
+                          </option>
+                        ))
+                      ) : (
+                        <option value={opsOwner || 'Ops Executive'}>{opsOwner || 'Ops Executive'}</option>
+                      )}
                     </select>
                   ) : (
                     <div className="mt-1.5 h-10 w-full rounded-md border border-border bg-slate-100/70 px-3 flex items-center text-xs font-bold text-slate-700 select-none">

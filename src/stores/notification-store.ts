@@ -1,100 +1,150 @@
 import { create } from 'zustand'
 import type { Notification } from '@/types'
-import { MOCK_NOTIFICATIONS, persistMockNotifications } from '@/lib/mock-data'
+import { MOCK_NOTIFICATIONS, persistMockNotifications, subscribeToMockNotifications } from '@/lib/mock-data'
 import { db } from '@/lib/firebase'
 import { useAuthStore } from '@/stores/auth-store'
 import {
   collection,
   doc,
-  getDocs,
   query,
   where,
   deleteDoc,
   writeBatch,
+  onSnapshot,
+  orderBy,
+  limit,
+  type Unsubscribe,
 } from 'firebase/firestore'
 
 interface NotificationState {
   notifications: Notification[]
   isLoading: boolean
   fetchNotifications: (userId: string) => Promise<void>
+  subscribeToLiveNotifications: (userId: string) => Unsubscribe | undefined
   markAsRead: (id: string) => Promise<void>
   markAllRead: (userId: string) => Promise<void>
   unreadCount: () => number
 }
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
-  notifications: [],
-  isLoading: false,
-
-  unreadCount: () => get().notifications.filter((n) => !n.is_read).length,
-
-  fetchNotifications: async (userId) => {
-    set({ isLoading: true })
+export const useNotificationStore = create<NotificationState>((set, get) => {
+  // ─── Demo Mode: Event Bus ──────────────────────────────────────────────────
+  // Re-reads MOCK_NOTIFICATIONS whenever a new notification is appended
+  subscribeToMockNotifications(() => {
     const currentUser = useAuthStore.getState().user
-    const isOps = currentUser?.role === 'ops'
-    
-    if (useAuthStore.getState().isDemo) {
-      set({
-        notifications: MOCK_NOTIFICATIONS.filter((n) => 
-          n.user_id === userId || 
-          (isOps && (n.user_id === 'demo-ops-chetan' || n.user_id === 'demo-ops' || n.user_id.includes('ops')))
-        ),
-        isLoading: false,
-      })
-      return
-    }
+    if (!currentUser || !useAuthStore.getState().isDemo) return
 
-    const q = query(collection(db, 'notifications'), where('user_id', '==', userId))
-    const snap = await getDocs(q)
-    const list: Notification[] = []
-    
-    snap.forEach((doc) => {
-      list.push({ id: doc.id, ...doc.data() } as Notification)
-    })
+    const uid = currentUser.id
+    const isOps = currentUser.role === 'ops'
+    const isSalesHead = currentUser.role === 'sales_head'
+    const isSalesRep = currentUser.role === 'sales_rep'
 
-    set({ notifications: list, isLoading: false })
-  },
+    const fresh = MOCK_NOTIFICATIONS.filter((n) =>
+      n.user_id === uid ||
+      (isSalesHead && (n.user_id === 'demo-head' || n.user_id === 'sales_head' || n.user_id?.includes('head'))) ||
+      (isSalesRep && (n.user_id === 'demo-sales' || n.user_id === 'demo-sales-2' || n.user_id === uid || n.user_id?.includes('sales'))) ||
+      (isOps && (n.user_id === 'demo-ops-chetan' || n.user_id === 'demo-ops' || n.user_id?.includes('ops')))
+    )
+    set({ notifications: fresh })
+  })
 
-  markAsRead: async (id) => {
-    set({
-      notifications: get().notifications.filter((n) => n.id !== id),
-    })
+  return {
+    notifications: [],
+    isLoading: false,
 
-    if (useAuthStore.getState().isDemo) {
-      const idx = MOCK_NOTIFICATIONS.findIndex((x) => x.id === id)
-      if (idx !== -1) {
-        MOCK_NOTIFICATIONS.splice(idx, 1)
-        persistMockNotifications()
+    unreadCount: () => get().notifications.filter((n) => !n.is_read).length,
+
+    // ─── Fetch (demo mode one-shot read) ─────────────────────────────────────
+    fetchNotifications: async (userId) => {
+      set({ isLoading: true })
+      const currentUser = useAuthStore.getState().user
+      const isOps = currentUser?.role === 'ops'
+      const isSalesHead = currentUser?.role === 'sales_head'
+      const isSalesRep = currentUser?.role === 'sales_rep'
+
+      if (useAuthStore.getState().isDemo) {
+        set({
+          notifications: MOCK_NOTIFICATIONS.filter((n) =>
+            n.user_id === userId ||
+            n.user_id === currentUser?.id ||
+            (isSalesHead && (n.user_id === 'demo-head' || n.user_id === 'sales_head' || n.user_id?.includes('head'))) ||
+            (isSalesRep && (n.user_id === 'demo-sales' || n.user_id === 'demo-sales-2' || n.user_id === 'sales_rep' || n.user_id?.includes('sales'))) ||
+            (isOps && (n.user_id === 'demo-ops-chetan' || n.user_id === 'demo-ops' || n.user_id?.includes('ops')))
+          ),
+          isLoading: false,
+        })
+        return
       }
-      return
-    }
 
-    await deleteDoc(doc(db, 'notifications', id))
-  },
+      // Live mode: no-op — subscribeToLiveNotifications handles real-time updates
+      set({ isLoading: false })
+    },
 
-  markAllRead: async (userId) => {
-    set({
-      notifications: [],
-    })
+    // ─── Live mode: Firestore onSnapshot real-time listener ──────────────────
+    subscribeToLiveNotifications: (userId) => {
+      if (useAuthStore.getState().isDemo) return undefined
 
-    if (useAuthStore.getState().isDemo) {
-      for (let i = MOCK_NOTIFICATIONS.length - 1; i >= 0; i--) {
-        if (MOCK_NOTIFICATIONS[i].user_id === userId) {
-          MOCK_NOTIFICATIONS.splice(i, 1)
+      const q = query(
+        collection(db, 'notifications'),
+        where('user_id', '==', userId),
+        orderBy('created_at', 'desc'),
+        limit(50)
+      )
+
+      const unsubscribe = onSnapshot(
+        q,
+        (snap) => {
+          const list: Notification[] = []
+          snap.forEach((d) => {
+            list.push({ id: d.id, ...d.data() } as Notification)
+          })
+          set({ notifications: list, isLoading: false })
+        },
+        (err) => {
+          console.error('Notification listener error:', err)
+          set({ isLoading: false })
         }
-      }
-      persistMockNotifications()
-      return
-    }
+      )
 
-    const q = query(collection(db, 'notifications'), where('user_id', '==', userId))
-    const snap = await getDocs(q)
-    const batch = writeBatch(db)
-    
-    snap.forEach((doc) => {
-      batch.delete(doc.ref)
-    })
-    
-    await batch.commit()
-  },
-}))
+      return unsubscribe
+    },
+
+    // ─── Mark as read ─────────────────────────────────────────────────────────
+    markAsRead: async (id) => {
+      set({
+        notifications: get().notifications.filter((n) => n.id !== id),
+      })
+
+      if (useAuthStore.getState().isDemo) {
+        const idx = MOCK_NOTIFICATIONS.findIndex((x) => x.id === id)
+        if (idx !== -1) {
+          MOCK_NOTIFICATIONS.splice(idx, 1)
+          persistMockNotifications()
+        }
+        return
+      }
+
+      await deleteDoc(doc(db, 'notifications', id))
+    },
+
+    // ─── Mark all read ────────────────────────────────────────────────────────
+    markAllRead: async (userId) => {
+      set({ notifications: [] })
+
+      if (useAuthStore.getState().isDemo) {
+        for (let i = MOCK_NOTIFICATIONS.length - 1; i >= 0; i--) {
+          if (MOCK_NOTIFICATIONS[i].user_id === userId) {
+            MOCK_NOTIFICATIONS.splice(i, 1)
+          }
+        }
+        persistMockNotifications()
+        return
+      }
+
+      const q = query(collection(db, 'notifications'), where('user_id', '==', userId))
+      const snap = await import('firebase/firestore').then(({ getDocs }) => getDocs(q))
+      const batch = writeBatch(db)
+      snap.forEach((d) => batch.delete(d.ref))
+      await batch.commit()
+    },
+  }
+})

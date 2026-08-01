@@ -1,23 +1,21 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
-  FileText, Plus, Trash2, ChevronDown, ArrowLeft, Rocket, Zap,
+  FileText, Plus, Trash2, ChevronDown, ArrowLeft, Rocket,
   ClipboardList, MessageSquare, FileCheck2, Upload, Clipboard,
-  Briefcase, Calendar, Layers, X, AlertTriangle, Download,
-  Package, Building2, User2, DollarSign, Settings2, Eye,
+  Calendar, Layers, X, AlertTriangle,
+  Building2, DollarSign, Settings2,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchCustomers } from '@/services/customers-service'
-import { saveDeal, fetchDealById, fetchDeals } from '@/services/deals-service'
+import { saveDeal, fetchDealById } from '@/services/deals-service'
+import { fetchSettings } from '@/services/targets-service'
 import { useDispatch } from 'react-redux'
 import { addDeal, updateDeal } from '@/store/deals-slice'
 import type { Customer } from '@/lib/mock-data'
 import type { BOMItem, Deal, DealVersion, DealItemSubItem } from '@/types'
-import { PDFDownloadLink } from '@react-pdf/renderer'
-import { QuotePDFDocument } from '@/components/deals/PDFDocument'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface LineItem {
@@ -53,17 +51,7 @@ function newLineItem(): LineItem {
   }
 }
 
-function newSubItem(): DealItemSubItem {
-  return {
-    id: `sub-${Date.now()}-${Math.random()}`,
-    part_number: '',
-    brand: '',
-    description: '',
-    quantity: 1,
-    unit_cost: 0,
-    unit_price: 0,
-  }
-}
+
 
 const safeNum = (val: any) => {
   const n = Number(val)
@@ -131,14 +119,14 @@ function StyledTextarea({ className = '', ...props }: React.TextareaHTMLAttribut
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export function QuoteNewPage() {
   const { id } = useParams<{ id: string }>()
-  const isEditMode = !!id
+  const isEditMode = Boolean(id && id !== 'new')
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)!
   const dispatch = useDispatch()
 
   const [loading, setLoading] = useState(isEditMode)
   const [quote, setQuote] = useState<Deal | null>(null)
-  const [isApprovedEdit, setIsApprovedEdit] = useState(false)
+  const [isVersionedEdit, setIsVersionedEdit] = useState(false)
 
   // Basic Info
   const [proposalTitle, setProposalTitle] = useState('')
@@ -194,18 +182,15 @@ export function QuoteNewPage() {
   const [saving, setSaving] = useState(false)
   const [clientOpen, setClientOpen] = useState(false)
   const [presetOpen, setPresetOpen] = useState(false)
-  const [currencyOpen, setCurrencyOpen] = useState(false)
 
   const clientRef = useRef<HTMLDivElement>(null)
   const presetRef = useRef<HTMLDivElement>(null)
-  const currencyRef = useRef<HTMLDivElement>(null)
 
   // ── Close dropdowns on outside click ──────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (clientRef.current && !clientRef.current.contains(e.target as Node)) setClientOpen(false)
       if (presetRef.current && !presetRef.current.contains(e.target as Node)) setPresetOpen(false)
-      if (currencyRef.current && !currencyRef.current.contains(e.target as Node)) setCurrencyOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -216,12 +201,48 @@ export function QuoteNewPage() {
     fetchCustomers().then(setCustomers).catch(console.error)
   }, [])
 
+  const handleSelectCustomer = (c: Customer) => {
+    setClientId(c.id)
+    setClientSearch(c.name)
+    setClientOpen(false)
+
+    if (c.contact_name) {
+      setContactName(c.contact_name)
+    }
+
+    const hasBilling = !!(c.billing_street || c.billing_city || c.billing_state || c.billing_code || c.billing_country)
+    if (hasBilling) {
+      setBillingStreet(c.billing_street || '')
+      setBillingCity(c.billing_city || '')
+      setBillingState(c.billing_state || '')
+      setBillingCode(c.billing_code || '')
+      setBillingCountry(c.billing_country || 'India')
+    }
+
+    const hasShipping = !!(c.shipping_street || c.shipping_city || c.shipping_state || c.shipping_code || c.shipping_country)
+    if (hasShipping) {
+      setShippingStreet(c.shipping_street || '')
+      setShippingCity(c.shipping_city || '')
+      setShippingState(c.shipping_state || '')
+      setShippingCode(c.shipping_code || '')
+      setShippingCountry(c.shipping_country || 'India')
+    } else if (hasBilling) {
+      setShippingStreet(c.billing_street || '')
+      setShippingCity(c.billing_city || '')
+      setShippingState(c.billing_state || '')
+      setShippingCode(c.billing_code || '')
+      setShippingCountry(c.billing_country || 'India')
+    }
+
+    toast.info(`Auto-filled address & contact details for ${c.name}`)
+  }
+
   useEffect(() => {
     if (!isEditMode) return
     fetchDealById(id!).then((d) => {
       if (!d) { navigate('/quotes'); return }
       setQuote(d)
-      setIsApprovedEdit(d.status === 'approved')
+      setIsVersionedEdit(d.status === 'approved' || d.status === 'rejected')
       setProposalTitle(d.title || '')
       setClientSearch(d.customer_name || '')
       setClientId(d.customer_id || '')
@@ -272,23 +293,6 @@ export function QuoteNewPage() {
   const removeItem = (id: string) =>
     setLineItems(prev => prev.filter(li => li.id !== id))
 
-  const addSubItem = (lineId: string) =>
-    setLineItems(prev => prev.map(li =>
-      li.id === lineId ? { ...li, sub_items: [...(li.sub_items || []), newSubItem()] } : li
-    ))
-
-  const removeSubItem = (lineId: string, subId: string) =>
-    setLineItems(prev => prev.map(li =>
-      li.id === lineId ? { ...li, sub_items: (li.sub_items || []).filter(s => s.id !== subId) } : li
-    ))
-
-  const updateSubItem = (lineId: string, subId: string, field: keyof DealItemSubItem, value: any) =>
-    setLineItems(prev => prev.map(li =>
-      li.id === lineId ? {
-        ...li, sub_items: (li.sub_items || []).map(s => s.id === subId ? { ...s, [field]: value } : s)
-      } : li
-    ))
-
   // ── BOM Excel import ─────────────────────────────────────────────────────
   const loadXLSX = () => new Promise<any>((resolve, reject) => {
     if ((window as any).XLSX) { resolve((window as any).XLSX); return }
@@ -300,46 +304,152 @@ export function QuoteNewPage() {
   })
 
   const parseExcelRows = (rows: any[][]): BOMItem[] => {
+    if (!rows || rows.length === 0) return []
+
+    const KNOWN_FIELD_MAP: Record<string, keyof BOMItem> = {
+      'description': 'description',
+      'desc': 'description',
+      'item': 'description',
+      'item description': 'description',
+      'product': 'description',
+      'product description': 'description',
+      'product name': 'description',
+      'specification': 'description',
+      'spec': 'description',
+      'particulars': 'description',
+      'details': 'description',
+      'name': 'description',
+      'component': 'description',
+
+      'module': 'module',
+      'category': 'module',
+      'group': 'module',
+      'component group': 'module',
+      'type': 'module',
+
+      'qty': 'quantity',
+      'quantity': 'quantity',
+      'count': 'quantity',
+      'units': 'quantity',
+      'no': 'quantity',
+      'nos': 'quantity',
+      'no.': 'quantity',
+
+      'part number': 'part_number',
+      'part_number': 'part_number',
+      'part_no': 'part_number',
+      'part no': 'part_number',
+      'part #': 'part_number',
+      'part#': 'part_number',
+      'sku': 'part_number',
+      'model': 'part_number',
+
+      'brand': 'brand',
+      'make': 'brand',
+      'oem': 'brand',
+      'vendor': 'brand',
+      'manufacturer': 'brand',
+
+      'section': 'section',
+      'phase': 'section',
+      'stage': 'section',
+      'location': 'section',
+    }
+
+    let headerRowIndex = -1
+    let maxKnownCount = 0
+    let colMap: Array<{ typedField?: keyof BOMItem; rawHeader: string }> = []
+
+    for (let r = 0; r < Math.min(rows.length, 15); r++) {
+      const candidateRow = rows[r]
+      if (!candidateRow || !Array.isArray(candidateRow)) continue
+
+      const headers = candidateRow.map((c: any) => String(c || '').toLowerCase().trim())
+      const knownCount = headers.filter((h: string) => h && KNOWN_FIELD_MAP[h]).length
+
+      if (knownCount > maxKnownCount) {
+        maxKnownCount = knownCount
+        headerRowIndex = r
+        colMap = headers.map((h: string) => ({ typedField: KNOWN_FIELD_MAP[h], rawHeader: h }))
+      }
+    }
+
+    const hasHeader = maxKnownCount >= 1 && headerRowIndex !== -1
+    const dataRows = hasHeader ? rows.slice(headerRowIndex + 1) : rows
+
     let currentSection = 'General'
     const parsed: BOMItem[] = []
-    const KNOWN_FIELD_MAP: Record<string, keyof BOMItem> = {
-      'module': 'module', 'category': 'module', 'description': 'description',
-      'desc': 'description', 'qty': 'quantity', 'quantity': 'quantity',
-      'section': 'section', 'part number': 'part_number', 'part_no': 'part_number',
-      'brand': 'brand', 'make': 'make', 'type': 'type',
-    }
-    const header = rows[0]?.map((c: any) => String(c).toLowerCase().trim())
-    let hasHeader = false
-    const colMap: Array<{ typedField?: keyof BOMItem; rawHeader: string }> = []
-    if (header) {
-      const knownCount = header.filter((h: string) => KNOWN_FIELD_MAP[h]).length
-      if (knownCount >= 1) {
-        hasHeader = true
-        header.forEach((h: string) => colMap.push({ typedField: KNOWN_FIELD_MAP[h], rawHeader: h }))
-      }
-    }
-    const dataRows = hasHeader ? rows.slice(1) : rows
+
     dataRows.forEach((row) => {
-      if (!row || row.every((c: any) => !c)) return
+      if (!row || !Array.isArray(row) || row.every((c: any) => c === null || c === undefined || String(c).trim() === '')) return
+
       if (!hasHeader) {
-        const [module, description, quantity] = row
-        if (!description) { currentSection = String(module || '').trim() || currentSection; return }
-        parsed.push({ section: currentSection, module: String(module || '').trim(), description: String(description || '').trim(), quantity: safeNum(quantity) || 1 })
+        const [col0, col1, col2, col3, col4] = row.map((c: any) => String(c || '').trim())
+        if (!col0 && !col1) return
+
+        if (!col1 && col0) {
+          currentSection = col0
+          return
+        }
+
+        const description = col1 || col0
+        const moduleVal = col1 ? col0 : ''
+        const qtyVal = safeNum(col2) || 1
+
+        parsed.push({
+          section: currentSection,
+          module: moduleVal,
+          description: description,
+          quantity: qtyVal,
+          part_number: col3 || undefined,
+          brand: col4 || undefined,
+        })
         return
       }
+
       const item: BOMItem = { section: currentSection, module: '', description: '', quantity: 1 }
       const extra: Record<string, string> = {}
+
       row.forEach((cell: any, ci: number) => {
         const col = colMap[ci]
         if (!col) return
         const val = cell === null || cell === undefined ? '' : String(cell).trim()
-        if (col.typedField) (item as any)[col.typedField] = col.typedField === 'quantity' ? safeNum(val) || 1 : val
-        else if (val) extra[col.rawHeader] = val
+        if (!val) return
+
+        if (col.typedField) {
+          if (col.typedField === 'quantity') {
+            item.quantity = safeNum(val) || 1
+          } else if (col.typedField === 'section') {
+            currentSection = val
+            item.section = val
+          } else {
+            (item as any)[col.typedField] = val
+          }
+        } else {
+          extra[col.rawHeader] = val
+        }
       })
-      if (Object.keys(extra).length) item.extra_fields = extra
-      if (!item.description) { currentSection = item.module || currentSection; return }
+
+      if (Object.keys(extra).length > 0) {
+        item.extra_fields = extra
+      }
+
+      if (!item.description) {
+        if (item.module && !item.part_number && !item.brand) {
+          currentSection = item.module
+          return
+        } else if (item.part_number) {
+          item.description = item.part_number
+        } else if (item.module) {
+          item.description = item.module
+        } else {
+          return
+        }
+      }
+
       parsed.push(item)
     })
+
     return parsed
   }
 
@@ -350,12 +460,29 @@ export function QuoteNewPage() {
       const XLSX = await loadXLSX()
       const buf = await file.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array' })
-      const ws = wb.Sheets[wb.SheetNames[0]]
-      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
-      const parsed = parseExcelRows(rows)
-      if (parsed.length > 0) { setBomData(parsed); toast.success(`Imported ${parsed.length} BOM items`) }
-      else toast.error('No valid BOM items found')
-    } catch { toast.error('Failed to read Excel file') }
+
+      let parsed: BOMItem[] = []
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName]
+        if (!ws) continue
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+        const res = parseExcelRows(rows)
+        if (res.length > 0) {
+          parsed = res
+          break
+        }
+      }
+
+      if (parsed.length > 0) {
+        setBomData(parsed)
+        toast.success(`Imported ${parsed.length} BOM items`)
+      } else {
+        toast.error('No valid BOM items found in Excel file. Please ensure column headers like "Description" or "Item" exist.')
+      }
+    } catch (err) {
+      console.error('Excel upload error:', err)
+      toast.error('Failed to read Excel file. Please ensure it is a valid .xlsx or .csv file.')
+    }
     e.target.value = ''
   }
 
@@ -410,7 +537,7 @@ export function QuoteNewPage() {
       status: 'draft',
       created_by: user.id,
       currency,
-      requires_technical: false,
+      requires_technical: true,
       total_revenue: total,
       total_cost: 0,
       gross_margin_pct: 100,
@@ -454,7 +581,7 @@ export function QuoteNewPage() {
   }
 
   // ── Debounced state for PDF rendering ──────────────────────────────────
-  const [debouncedDeal, setDebouncedDeal] = useState<Deal>(() => buildDeal())
+  const [_debouncedDeal, setDebouncedDeal] = useState<Deal>(() => buildDeal())
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -521,7 +648,7 @@ export function QuoteNewPage() {
     setSaving(true)
     try {
       const newVersions: DealVersion[] = [...(quote?.previous_versions ?? [])]
-      if (isApprovedEdit && quote) {
+      if (isVersionedEdit && quote) {
         newVersions.push({
           version_number: newVersions.length + 1,
           saved_at: new Date().toISOString(),
@@ -541,7 +668,7 @@ export function QuoteNewPage() {
       }
 
       const baseQuoteNumber = quote?.quote_number?.replace(/-v\d+$/, '') ?? quote?.quote_number
-      const versionedQuoteNumber = isApprovedEdit
+      const versionedQuoteNumber = isVersionedEdit
         ? `${baseQuoteNumber}-v${newVersions.length + 1}`
         : (quote?.quote_number ?? `QT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`)
 
@@ -553,9 +680,10 @@ export function QuoteNewPage() {
         customer_id: finalClientId,
         currency,
         quote_number: versionedQuoteNumber,
-        deal_number: quote?.deal_number,
-        requires_technical: false,
-        status: isApprovedEdit ? 'draft' : (quote?.status ?? 'draft'),
+        deal_number: versionedQuoteNumber,
+        requires_technical: true,
+        status: isVersionedEdit ? 'draft' : (quote?.status ?? 'draft'),
+        rejection_reason: isVersionedEdit ? null : (quote?.rejection_reason ?? null),
         description: notes,
         is_quote_only: true,
         discount_pct: safeNum(discount),
@@ -597,8 +725,24 @@ export function QuoteNewPage() {
         ],
       }, user.id)
 
-      if (isEditMode) { dispatch(updateDeal(deal)); toast.success(`Quote ${versionedQuoteNumber} updated!`) }
-      else { dispatch(addDeal(deal)); toast.success(`Quote ${versionedQuoteNumber} created!`) }
+      if (isEditMode) {
+        dispatch(updateDeal(deal))
+        toast.success(
+          isVersionedEdit
+            ? `Quote ${versionedQuoteNumber} updated as draft! Click "Submit for Approval" to resubmit.`
+            : `Quote ${versionedQuoteNumber} updated!`
+        )
+      } else {
+        dispatch(addDeal(deal))
+        const settings = fetchSettings()
+        const floorMarginDecimal = settings?.floor_margin_pct ?? 0.06
+        const quoteMarginDecimal = (deal.gross_margin_pct ?? 0) / 100
+        if (quoteMarginDecimal < floorMarginDecimal) {
+          toast.warning(`Quote ${versionedQuoteNumber} created below floor margin (${(deal.gross_margin_pct ?? 0).toFixed(1)}%). Submit for approval to send email to Sales Head.`)
+        } else {
+          toast.success(`Quote ${versionedQuoteNumber} created!`)
+        }
+      }
       navigate(`/quotes/${deal.id}`)
     } catch (err) {
       console.error(err)
@@ -622,13 +766,17 @@ export function QuoteNewPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 -m-3 sm:-m-4 md:-m-6 p-3 sm:p-4 md:p-6">
 
-      {/* ── Approved Edit Banner ── */}
-      {isApprovedEdit && (
+      {/* ── Versioned Edit Banner ── */}
+      {isVersionedEdit && (
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold text-amber-900 text-sm">Revising an Approved Quote</p>
-            <p className="text-xs text-amber-800 mt-0.5">Changes will create a new version. The current approved version will be archived.</p>
+            <p className="font-bold text-amber-900 text-sm">
+              Revising a {quote?.status === 'rejected' ? 'Rejected' : 'Approved'} Quote
+            </p>
+            <p className="text-xs text-amber-800 mt-0.5">
+              Saving changes will create version <strong>v{(quote?.previous_versions?.length ?? 0) + 2}</strong>. The current {quote?.status} version will be archived as a snapshot in version history, and this quote will be reset to draft ready for re-submission.
+            </p>
           </div>
         </div>
       )}
@@ -707,9 +855,18 @@ export function QuoteNewPage() {
                           ? <p className="px-4 py-3 text-xs text-muted-foreground">No matches — will create new client</p>
                           : customers.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
                             <button key={c.id} type="button"
-                              onClick={() => { setClientId(c.id); setClientSearch(c.name); setClientOpen(false) }}
+                              onClick={() => handleSelectCustomer(c)}
                               className={`w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors ${c.id === clientId ? 'text-primary font-semibold bg-primary/5' : 'text-foreground'}`}
-                            >{c.name}</button>
+                            >
+                              <div>
+                                <div className="font-semibold">{c.name}</div>
+                                {(c.billing_city || c.contact_name) && (
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {[c.contact_name, c.billing_city, c.billing_state].filter(Boolean).join(' • ')}
+                                  </div>
+                                )}
+                              </div>
+                            </button>
                           ))
                         }
                       </div>

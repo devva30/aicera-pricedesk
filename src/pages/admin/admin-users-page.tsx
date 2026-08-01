@@ -43,7 +43,23 @@ export function AdminUsersPage() {
   const [loadingCustomers, setLoadingCustomers] = useState(true)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
-  const [customerForm, setCustomerForm] = useState({ name: '', id: '' })
+  const [customerForm, setCustomerForm] = useState({
+    id: '',
+    name: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    billing_street: '',
+    billing_city: '',
+    billing_state: '',
+    billing_code: '',
+    billing_country: 'India',
+    shipping_street: '',
+    shipping_city: '',
+    shipping_state: '',
+    shipping_code: '',
+    shipping_country: 'India',
+  })
 
   const loadInvites = useCallback(async () => {
     setLoadingInvites(true)
@@ -87,14 +103,58 @@ export function AdminUsersPage() {
   const openAddCustomer = () => {
     const generatedId = 'CUST-' + Math.floor(1000 + Math.random() * 9000)
     setEditingCustomer(null)
-    setCustomerForm({ name: '', id: generatedId })
+    setCustomerForm({
+      id: generatedId,
+      name: '',
+      contact_name: '',
+      contact_email: '',
+      contact_phone: '',
+      billing_street: '',
+      billing_city: '',
+      billing_state: '',
+      billing_code: '',
+      billing_country: 'India',
+      shipping_street: '',
+      shipping_city: '',
+      shipping_state: '',
+      shipping_code: '',
+      shipping_country: 'India',
+    })
     setIsDrawerOpen(true)
   }
 
   const openEditCustomer = (cust: Customer) => {
     setEditingCustomer(cust)
-    setCustomerForm({ name: cust.name, id: cust.id })
+    setCustomerForm({
+      id: cust.id,
+      name: cust.name || '',
+      contact_name: cust.contact_name || '',
+      contact_email: cust.contact_email || '',
+      contact_phone: cust.contact_phone || '',
+      billing_street: cust.billing_street || '',
+      billing_city: cust.billing_city || '',
+      billing_state: cust.billing_state || '',
+      billing_code: cust.billing_code || '',
+      billing_country: cust.billing_country || 'India',
+      shipping_street: cust.shipping_street || '',
+      shipping_city: cust.shipping_city || '',
+      shipping_state: cust.shipping_state || '',
+      shipping_code: cust.shipping_code || '',
+      shipping_country: cust.shipping_country || 'India',
+    })
     setIsDrawerOpen(true)
+  }
+
+  const handleCopyBillingToShipping = () => {
+    setCustomerForm(prev => ({
+      ...prev,
+      shipping_street: prev.billing_street,
+      shipping_city: prev.billing_city,
+      shipping_state: prev.billing_state,
+      shipping_code: prev.billing_code,
+      shipping_country: prev.billing_country,
+    }))
+    toast.success('Billing address copied to shipping address!')
   }
 
   const handleSaveCustomer = async (e: React.FormEvent) => {
@@ -107,7 +167,20 @@ export function AdminUsersPage() {
       await saveCustomer({
         id: customerForm.id,
         name: customerForm.name.trim(),
-        created_at: editingCustomer?.created_at || new Date().toISOString()
+        created_at: editingCustomer?.created_at || new Date().toISOString(),
+        contact_name: customerForm.contact_name.trim() || undefined,
+        contact_email: customerForm.contact_email.trim() || undefined,
+        contact_phone: customerForm.contact_phone.trim() || undefined,
+        billing_street: customerForm.billing_street.trim() || undefined,
+        billing_city: customerForm.billing_city.trim() || undefined,
+        billing_state: customerForm.billing_state.trim() || undefined,
+        billing_code: customerForm.billing_code.trim() || undefined,
+        billing_country: customerForm.billing_country.trim() || undefined,
+        shipping_street: customerForm.shipping_street.trim() || undefined,
+        shipping_city: customerForm.shipping_city.trim() || undefined,
+        shipping_state: customerForm.shipping_state.trim() || undefined,
+        shipping_code: customerForm.shipping_code.trim() || undefined,
+        shipping_country: customerForm.shipping_country.trim() || undefined,
       })
       toast.success(editingCustomer ? 'Customer updated successfully' : 'Customer added successfully')
       setIsDrawerOpen(false)
@@ -445,41 +518,59 @@ export function AdminUsersPage() {
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-muted-foreground">
+                  <tr className="border-b text-muted-foreground text-xs uppercase tracking-wider">
                     <th className="pb-3 text-left font-medium px-2">Customer ID</th>
                     <th className="pb-3 text-left font-medium px-2">Customer Name</th>
+                    <th className="pb-3 text-left font-medium px-2">Primary Contact</th>
+                    <th className="pb-3 text-left font-medium px-2">Billing Location</th>
                     <th className="pb-3 text-left font-medium px-2">Date Added</th>
                     <th className="pb-3 text-right font-medium px-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.map((cust) => (
-                    <tr key={cust.id} className="border-b border-border/30 hover:bg-muted/20">
-                      <td className="py-3 px-2 font-mono text-xs text-muted-foreground">{cust.id}</td>
-                      <td className="py-3 px-2 font-medium">{cust.name}</td>
-                      <td className="py-3 px-2 text-muted-foreground">{formatRelative(cust.created_at)}</td>
-                      <td className="py-3 px-2">
-                        <div className="flex justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2.5 hover:bg-muted"
-                            onClick={() => openEditCustomer(cust)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2.5"
-                            onClick={() => handleDeleteCustomer(cust)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {customers.map((cust) => {
+                    const location = [cust.billing_city, cust.billing_state, cust.billing_country].filter(Boolean).join(', ')
+                    return (
+                      <tr key={cust.id} className="border-b border-border/30 hover:bg-muted/20 text-xs">
+                        <td className="py-3 px-2 font-mono text-muted-foreground font-semibold">{cust.id}</td>
+                        <td className="py-3 px-2 font-bold text-foreground">{cust.name}</td>
+                        <td className="py-3 px-2">
+                          {cust.contact_name ? (
+                            <div>
+                              <div className="font-medium text-foreground">{cust.contact_name}</div>
+                              {cust.contact_email && <div className="text-[11px] text-muted-foreground">{cust.contact_email}</div>}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic text-[11px]">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-muted-foreground">
+                          {location || <span className="italic text-[11px]">—</span>}
+                        </td>
+                        <td className="py-3 px-2 text-muted-foreground">{formatRelative(cust.created_at)}</td>
+                        <td className="py-3 px-2">
+                          <div className="flex justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2.5 hover:bg-muted font-medium"
+                              onClick={() => openEditCustomer(cust)}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2.5 font-medium"
+                              onClick={() => handleDeleteCustomer(cust)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}
@@ -528,36 +619,241 @@ export function AdminUsersPage() {
               </div>
 
               {/* Form Body */}
-              <form onSubmit={handleSaveCustomer} className="flex-1 flex flex-col justify-between">
-                <div className="p-6 space-y-4 flex-1">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cust-id" className="text-xs font-semibold text-foreground">
-                      Customer ID
-                    </Label>
-                    <Input
-                      id="cust-id"
-                      value={customerForm.id}
-                      disabled
-                      className="bg-muted/50 text-muted-foreground font-mono cursor-not-allowed h-10 border-border rounded-lg"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Auto-generated customer reference identifier
-                    </p>
+              <form onSubmit={handleSaveCustomer} className="flex-1 flex flex-col justify-between overflow-hidden">
+                <div className="p-6 space-y-5 flex-1 overflow-y-auto max-h-[calc(100vh-140px)]">
+                  {/* Basic Information */}
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 pb-1">
+                      Account & Contact Information
+                    </h3>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cust-id" className="text-xs font-semibold text-foreground">
+                        Customer ID
+                      </Label>
+                      <Input
+                        id="cust-id"
+                        value={customerForm.id}
+                        disabled
+                        className="bg-muted/50 text-muted-foreground font-mono cursor-not-allowed h-9 border-border rounded-lg text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cust-name" className="text-xs font-semibold text-foreground flex items-center gap-1">
+                        Customer Name <span className="text-primary font-bold">*</span>
+                      </Label>
+                      <Input
+                        id="cust-name"
+                        value={customerForm.name}
+                        onChange={(e) => setCustomerForm(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. Tata Steel Ltd."
+                        required
+                        autoFocus
+                        className="bg-background h-9 border-border rounded-lg text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2.5">
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-contact-name" className="text-[11px] font-medium text-foreground">
+                          Contact Person
+                        </Label>
+                        <Input
+                          id="cust-contact-name"
+                          value={customerForm.contact_name}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, contact_name: e.target.value }))}
+                          placeholder="e.g. Rajesh Shah"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label htmlFor="cust-contact-email" className="text-[11px] font-medium text-foreground">
+                            Email Address
+                          </Label>
+                          <Input
+                            id="cust-contact-email"
+                            type="email"
+                            value={customerForm.contact_email}
+                            onChange={(e) => setCustomerForm(prev => ({ ...prev, contact_email: e.target.value }))}
+                            placeholder="rajesh@company.com"
+                            className="bg-background h-9 text-xs"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="cust-contact-phone" className="text-[11px] font-medium text-foreground">
+                            Phone Number
+                          </Label>
+                          <Input
+                            id="cust-contact-phone"
+                            value={customerForm.contact_phone}
+                            onChange={(e) => setCustomerForm(prev => ({ ...prev, contact_phone: e.target.value }))}
+                            placeholder="+91 98200 12345"
+                            className="bg-background h-9 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="cust-name" className="text-xs font-semibold text-foreground flex items-center gap-1">
-                      Customer Name <span className="text-primary font-bold">*</span>
-                    </Label>
-                    <Input
-                      id="cust-name"
-                      value={customerForm.name}
-                      onChange={(e) => setCustomerForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="e.g. Tata Steel Ltd."
-                      required
-                      autoFocus
-                      className="bg-background h-10 border-border rounded-lg focus:ring-1 focus:ring-primary focus:border-primary text-sm transition-all"
-                    />
+                  {/* Billing Address Section */}
+                  <div className="space-y-3 pt-2">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 pb-1">
+                      Billing Address
+                    </h3>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cust-billing-street" className="text-[11px] font-medium text-foreground">
+                        Street Address / Area
+                      </Label>
+                      <Input
+                        id="cust-billing-street"
+                        value={customerForm.billing_street}
+                        onChange={(e) => setCustomerForm(prev => ({ ...prev, billing_street: e.target.value }))}
+                        placeholder="e.g. 122 MG Road, Fort"
+                        className="bg-background h-9 text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-billing-city" className="text-[11px] font-medium text-foreground">
+                          City
+                        </Label>
+                        <Input
+                          id="cust-billing-city"
+                          value={customerForm.billing_city}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, billing_city: e.target.value }))}
+                          placeholder="Mumbai"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-billing-state" className="text-[11px] font-medium text-foreground">
+                          State
+                        </Label>
+                        <Input
+                          id="cust-billing-state"
+                          value={customerForm.billing_state}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, billing_state: e.target.value }))}
+                          placeholder="Maharashtra"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-billing-code" className="text-[11px] font-medium text-foreground">
+                          ZIP / PIN Code
+                        </Label>
+                        <Input
+                          id="cust-billing-code"
+                          value={customerForm.billing_code}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, billing_code: e.target.value }))}
+                          placeholder="400001"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-billing-country" className="text-[11px] font-medium text-foreground">
+                          Country
+                        </Label>
+                        <Input
+                          id="cust-billing-country"
+                          value={customerForm.billing_country}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, billing_country: e.target.value }))}
+                          placeholder="India"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Shipping Address Section */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between border-b border-border/60 pb-1">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Shipping Address
+                      </h3>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopyBillingToShipping}
+                        className="h-6 text-[10px] text-primary hover:text-primary font-semibold px-2 hover:bg-primary/10"
+                      >
+                        Copy Billing → Shipping
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cust-shipping-street" className="text-[11px] font-medium text-foreground">
+                        Street Address / Warehouse
+                      </Label>
+                      <Input
+                        id="cust-shipping-street"
+                        value={customerForm.shipping_street}
+                        onChange={(e) => setCustomerForm(prev => ({ ...prev, shipping_street: e.target.value }))}
+                        placeholder="e.g. Logistics Park Hub 4, Bhiwandi"
+                        className="bg-background h-9 text-xs"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-shipping-city" className="text-[11px] font-medium text-foreground">
+                          City
+                        </Label>
+                        <Input
+                          id="cust-shipping-city"
+                          value={customerForm.shipping_city}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, shipping_city: e.target.value }))}
+                          placeholder="Thane"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-shipping-state" className="text-[11px] font-medium text-foreground">
+                          State
+                        </Label>
+                        <Input
+                          id="cust-shipping-state"
+                          value={customerForm.shipping_state}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, shipping_state: e.target.value }))}
+                          placeholder="Maharashtra"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-shipping-code" className="text-[11px] font-medium text-foreground">
+                          ZIP / PIN Code
+                        </Label>
+                        <Input
+                          id="cust-shipping-code"
+                          value={customerForm.shipping_code}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, shipping_code: e.target.value }))}
+                          placeholder="421302"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="cust-shipping-country" className="text-[11px] font-medium text-foreground">
+                          Country
+                        </Label>
+                        <Input
+                          id="cust-shipping-country"
+                          value={customerForm.shipping_country}
+                          onChange={(e) => setCustomerForm(prev => ({ ...prev, shipping_country: e.target.value }))}
+                          placeholder="India"
+                          className="bg-background h-9 text-xs"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 

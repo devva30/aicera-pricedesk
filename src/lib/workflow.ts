@@ -31,6 +31,7 @@ export function canUserActOnDeal(
       'pending_technical',
       'pending_sales_head',
       'changes_requested',
+      'rejected',
     ],
   }
   return permissions[role]?.includes(status) ?? false

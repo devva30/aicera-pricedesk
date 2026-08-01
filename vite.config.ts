@@ -6,7 +6,7 @@ import path from 'path'
 import fs from 'fs'
 
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -21,7 +21,7 @@ export default defineConfig({
         background_color: '#1E1B4B',
         display: 'standalone',
         orientation: 'portrait-primary',
-        start_url: './index.html',
+        start_url: '/',
         icons: [
           {
             src: 'icons/icon-192.png',
@@ -54,7 +54,7 @@ export default defineConfig({
         clientsClaim: true,
         // Remove old caches from previous SW versions automatically
         cleanupOutdatedCaches: true,
-        navigateFallback: 'index.html',
+        navigateFallback: '/index.html',
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',

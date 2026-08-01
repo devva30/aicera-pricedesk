@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Printer, User, Building, Landmark, Percent, CheckSquare, Coins, ListCollapse, Clock, Share2, FileDown, Check, History, FileEdit, Package, FileText, Plus, Trash2, AlertTriangle } from 'lucide-react'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -45,7 +45,9 @@ export function DealDetailPage() {
   const isQuoteView = location.pathname.startsWith('/quotes')
   const user = useAuthStore((s) => s.user)
   const dispatch = useDispatch()
-  const [deal, setDeal] = useState<Deal | null>(null)
+  const storeDeals = useSelector((s: any) => s.deals.deals as Deal[])
+  const dealFromStore = storeDeals.find((d) => d.id === id || d.deal_number === id || d.quote_number === id) ?? null
+  const [deal, setDeal] = useState<Deal | null>(dealFromStore)
   const [audit, setAudit] = useState<DealAudit[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'details' | 'items' | 'overheads' | 'quotes'>('details')
@@ -53,6 +55,7 @@ export function DealDetailPage() {
   const [expandedVersion, setExpandedVersion] = useState<number | null>(null)
   const [settings, setSettings] = useState<any>(null)
   const [childQuotes, setChildQuotes] = useState<Deal[]>([])
+  const [showAllAudit, setShowAllAudit] = useState(false)
   const [isSigPadOpen, setIsSigPadOpen] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -86,24 +89,35 @@ export function DealDetailPage() {
 
   useEffect(() => {
     if (!id) return
-    const load = async () => {
-      setLoading(true)
+    const load = async (retries = 3) => {
+      if (!deal) setLoading(true)
       try {
         const [d, a, qs] = await Promise.all([
           fetchDealById(id),
           fetchDealAudit(id).catch((err) => {
             console.error('Failed to load deal audit trail:', err)
-            return [] // Fallback to empty audit trail so the page doesn't go blank
+            return []
           }),
           (!isQuoteView ? fetchQuotesByDealId(id) : Promise.resolve([])).catch((err) => {
             console.error('Failed to load child quotes:', err)
             return []
           })
         ])
-        setDeal(d)
+        const finalDeal = d || dealFromStore || deal
+        if (!finalDeal && retries > 0) {
+          // Firestore may not have committed the write yet — retry after a short delay
+          console.warn(`Deal not found on attempt, retrying... (${retries} left)`)
+          setTimeout(() => load(retries - 1), 800)
+          return
+        }
+        if (finalDeal) {
+          setDeal(finalDeal)
+          dispatch(updateDeal(finalDeal))
+        } else if (!deal) {
+          setDeal(null)
+        }
         setAudit(a)
         setChildQuotes(qs)
-        if (d) dispatch(updateDeal(d))
       } catch (err) {
         console.error('Failed to load deal details:', err)
         toast.error('Failed to load deal details. Check database indexes.')
@@ -121,7 +135,7 @@ export function DealDetailPage() {
     try {
       const a = await fetchDealAudit(updated.id)
       setAudit(a)
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to reload audit timeline:', e)
     }
   }
@@ -370,16 +384,20 @@ export function DealDetailPage() {
               <ArrowLeft className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Back</span>
             </Button>
-            {(deal.status === 'draft' || deal.status === 'changes_requested' || deal.status === 'rejected' || (isQuoteView && deal.status === 'pending_sales_head')) && (user.role === 'sales_rep' || user.role === 'admin') && (
-              <Button size="sm" onClick={() => navigate(`${isQuoteView ? '/quotes' : '/deals'}/${deal.id}/edit`)} className="text-xs h-8 bg-primary hover:bg-primary/95 text-white font-semibold">
-                {isQuoteView ? 'Edit Quote' : 'Edit Proposal'}
-              </Button>
-            )}
-            {deal.status === 'approved' && (user.role === 'sales_rep' || user.role === 'admin') && (
-              <Button size="sm" onClick={() => navigate(`${isQuoteView ? '/quotes' : '/deals'}/${deal.id}/edit`)} className={cn("text-xs h-8 text-white font-semibold", isQuoteView ? "bg-primary hover:bg-primary/95" : "bg-amber-600 hover:bg-amber-500")}>
-                <FileEdit className="h-3.5 w-3.5 mr-1.5" />
-                {isQuoteView ? 'Edit Quote' : 'Edit & Resubmit'}
-              </Button>
+            {isQuoteView ? (
+              (user?.role === 'sales_rep' || user?.role === 'admin') && (
+                <Button size="sm" onClick={() => navigate(`/quotes/${deal.id}/edit`)} className="text-xs h-8 bg-primary hover:bg-primary/95 text-white font-semibold flex items-center gap-1.5 shadow-sm">
+                  <FileEdit className="h-3.5 w-3.5" />
+                  Edit Quote
+                </Button>
+              )
+            ) : (
+              (deal.status === 'draft' || deal.status === 'changes_requested' || deal.status === 'rejected' || deal.status === 'approved') && (user?.role === 'sales_rep' || user?.role === 'admin') && (
+                <Button size="sm" onClick={() => navigate(`/deals/${deal.id}/edit`)} className={cn("text-xs h-8 text-white font-semibold flex items-center gap-1.5 shadow-sm", deal.status === 'approved' ? "bg-amber-600 hover:bg-amber-500" : "bg-primary hover:bg-primary/95")}>
+                  <FileEdit className="h-3.5 w-3.5" />
+                  {deal.status === 'approved' ? 'Edit & Resubmit' : 'Edit Proposal'}
+                </Button>
+              )
             )}
 
             {/* Share button */}
@@ -1062,11 +1080,12 @@ export function DealDetailPage() {
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
                 Activity Timeline
+                <span className="ml-auto text-[10px] font-normal text-muted-foreground">{audit.length} event{audit.length !== 1 ? 's' : ''}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="space-y-5 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border/60">
-                {audit.map((entry) => (
+              <div className={`space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-border/60 ${showAllAudit ? 'max-h-[420px] overflow-y-auto pr-1' : ''}`}>
+                {(showAllAudit ? audit : audit.slice(0, 4)).map((entry) => (
                   <motion.div
                     key={entry.id}
                     className="relative pl-6 text-xs"
@@ -1074,12 +1093,12 @@ export function DealDetailPage() {
                     <div className="absolute left-[5px] top-1.5 h-3.5 w-3.5 rounded-full bg-background border-2 border-primary flex items-center justify-center shrink-0">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                     </div>
-                    <div className="bg-muted/10 border border-border/40 p-2.5 rounded shadow-sm">
-                      <div className="flex justify-between items-start gap-1">
+                    <div className="bg-muted/10 border border-border/40 p-2 rounded shadow-sm">
+                      <div className="flex justify-between items-center gap-1">
                         <p className="font-semibold text-foreground capitalize">
                           {entry.action.replace('_', ' ')}
                         </p>
-                        <span className="text-[10px] text-muted-foreground font-mono">
+                        <span className="text-[10px] text-muted-foreground font-mono shrink-0">
                           {formatRelative(entry.created_at)}
                         </span>
                       </div>
@@ -1087,7 +1106,7 @@ export function DealDetailPage() {
                         By {entry.user?.full_name ?? 'System'}
                       </p>
                       {entry.comment && (
-                        <p className="text-[11px] mt-1.5 text-foreground italic border-t border-border/30 pt-1.5">
+                        <p className="text-[11px] mt-1 text-foreground italic border-t border-border/30 pt-1 line-clamp-2">
                           &ldquo;{entry.comment}&rdquo;
                         </p>
                       )}
@@ -1096,18 +1115,30 @@ export function DealDetailPage() {
                 ))}
 
                 {/* Initial Creation item */}
-                <div className="relative pl-6 text-xs">
-                  <div className="absolute left-[5px] top-1.5 h-3.5 w-3.5 rounded-full bg-background border-2 border-border flex items-center justify-center shrink-0">
-                    <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                {(!audit.length || showAllAudit) && (
+                  <div className="relative pl-6 text-xs">
+                    <div className="absolute left-[5px] top-1.5 h-3.5 w-3.5 rounded-full bg-background border-2 border-border flex items-center justify-center shrink-0">
+                      <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                    </div>
+                    <div className="bg-muted/10 border border-border/30 p-2 rounded">
+                      <p className="font-semibold text-muted-foreground">Deal Created</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {formatDate(deal.created_at)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="bg-muted/10 border border-border/30 p-2.5 rounded">
-                    <p className="font-semibold text-muted-foreground">Deal Created</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {formatDate(deal.created_at)}
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
+
+              {/* Show more / less toggle */}
+              {audit.length > 4 && (
+                <button
+                  onClick={() => setShowAllAudit(v => !v)}
+                  className="mt-3 w-full text-[11px] font-semibold text-primary hover:underline text-center cursor-pointer"
+                >
+                  {showAllAudit ? '↑ Show less' : `↓ Show ${audit.length - 4} more event${audit.length - 4 !== 1 ? 's' : ''}`}
+                </button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1119,7 +1150,7 @@ export function DealDetailPage() {
           <CardHeader className="border-b border-amber-200/60 bg-amber-50 py-3.5 px-4">
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-amber-800">
               <History className="h-4 w-4 text-amber-600" />
-              Previous Approved Versions
+              Version History & Snapshots
               <Badge className="text-[9px] py-0.5 px-2 bg-amber-100 text-amber-700 border border-amber-200 font-semibold ml-auto">
                 {(deal.previous_versions ?? []).length} snapshot{(deal.previous_versions ?? []).length !== 1 ? 's' : ''} saved
               </Badge>
@@ -1127,7 +1158,7 @@ export function DealDetailPage() {
           </CardHeader>
           <CardContent className="p-4 space-y-3">
             <p className="text-[11px] text-amber-700 mb-3">
-              These are read-only snapshots of previous approved versions, preserved when this deal was edited and resubmitted.
+              These are read-only snapshots of previous versions (approved/rejected), preserved when this proposal was edited and resubmitted.
             </p>
             {[...(deal.previous_versions ?? [])].reverse().map((version: DealVersion) => (
               <div key={version.version_number} className="border border-amber-200 rounded-lg overflow-hidden bg-white">
@@ -1154,8 +1185,13 @@ export function DealDetailPage() {
                         Net {formatPercent(version.net_margin_pct)}
                       </p>
                     </div>
-                    <Badge className="text-[9px] py-0.5 px-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold shrink-0">
-                      {DEAL_STATUS_LABELS[version.status]}
+                    <Badge className={cn(
+                      "text-[9px] py-0.5 px-2 border font-semibold shrink-0",
+                      version.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                      version.status === 'rejected' ? "bg-red-50 text-red-700 border-red-200" :
+                      "bg-slate-50 text-slate-700 border-slate-200"
+                    )}>
+                      {DEAL_STATUS_LABELS[version.status] || version.status}
                     </Badge>
                     <span className={`text-muted-foreground transition-transform duration-200 text-xs ${expandedVersion === version.version_number ? 'rotate-180' : ''}`}>▾</span>
                   </div>

@@ -1,5 +1,18 @@
 import type { Deal, DealAudit, Notification, User } from '@/types'
 
+// ─── Notification Event Bus ───────────────────────────────────────────────────
+// Allows the notification store to subscribe to new notifications
+// without a circular dependency (mock-data ← notification-store ← mock-data)
+type NotificationListener = (notif: Notification) => void
+const _notificationListeners: NotificationListener[] = []
+export function subscribeToMockNotifications(fn: NotificationListener): () => void {
+  _notificationListeners.push(fn)
+  return () => {
+    const idx = _notificationListeners.indexOf(fn)
+    if (idx !== -1) _notificationListeners.splice(idx, 1)
+  }
+}
+
 export const DEMO_USERS: Record<string, User> = {
   sales: {
     id: 'demo-sales',
@@ -792,6 +805,11 @@ export function appendMockNotification(notif: Omit<Notification, 'id' | 'created
   MOCK_NOTIFICATIONS.unshift(newNotif)
   persistMockNotifications()
 
+  // Notify all subscribers (e.g. notification-store) synchronously
+  for (const listener of _notificationListeners) {
+    try { listener(newNotif) } catch { /* ignore */ }
+  }
+
   // Trigger Browser Push Notification
   try {
     import('./audio-notifications').then(({ showBrowserNotification }) => {
@@ -807,18 +825,184 @@ export interface Customer {
   id: string
   name: string
   created_at: string
+  contact_name?: string
+  contact_email?: string
+  contact_phone?: string
+  billing_street?: string
+  billing_city?: string
+  billing_state?: string
+  billing_code?: string
+  billing_country?: string
+  shipping_street?: string
+  shipping_city?: string
+  shipping_state?: string
+  shipping_code?: string
+  shipping_country?: string
 }
 
 export const MOCK_CUSTOMERS: Customer[] = [
-  { id: 'CUST-8842', name: 'Tata Logistics Ltd.', created_at: new Date().toISOString() },
-  { id: 'CUST-3942', name: 'Apollo Hospitals Enterprise', created_at: new Date().toISOString() },
-  { id: 'CUST-5291', name: 'Reliance Retail Ltd.', created_at: new Date().toISOString() },
-  { id: 'CUST-1029', name: 'Titan Manufacturing Ltd.', created_at: new Date().toISOString() },
-  { id: 'CUST-9285', name: 'HDFC Capital Partners', created_at: new Date().toISOString() },
-  { id: 'CUST-1920', name: 'Adani Grid Solutions', created_at: new Date().toISOString() },
-  { id: 'CUST-3041', name: 'Infosys Technologies', created_at: new Date().toISOString() },
-  { id: 'CUST-4921', name: 'Wipro Enterprises', created_at: new Date().toISOString() },
-  { id: 'CUST-5510', name: 'L&T Construction', created_at: new Date().toISOString() },
+  {
+    id: 'CUST-8842',
+    name: 'Tata Logistics Ltd.',
+    created_at: new Date().toISOString(),
+    contact_name: 'Rajesh Shah',
+    contact_email: 'rajesh.shah@tatalogistics.com',
+    contact_phone: '+91 98200 12345',
+    billing_street: '122 MG Road, Fort',
+    billing_city: 'Mumbai',
+    billing_state: 'Maharashtra',
+    billing_code: '400001',
+    billing_country: 'India',
+    shipping_street: 'Logistics Hub 4, Bhiwandi',
+    shipping_city: 'Thane',
+    shipping_state: 'Maharashtra',
+    shipping_code: '421302',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-3942',
+    name: 'Apollo Hospitals Enterprise',
+    created_at: new Date().toISOString(),
+    contact_name: 'Dr. Ramesh Rao',
+    contact_email: 'ramesh.rao@apollo.org',
+    contact_phone: '+91 98400 67890',
+    billing_street: '21 Greams Lane, Off Greams Road',
+    billing_city: 'Chennai',
+    billing_state: 'Tamil Nadu',
+    billing_code: '600006',
+    billing_country: 'India',
+    shipping_street: '21 Greams Lane, Off Greams Road',
+    shipping_city: 'Chennai',
+    shipping_state: 'Tamil Nadu',
+    shipping_code: '600006',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-5291',
+    name: 'Reliance Retail Ltd.',
+    created_at: new Date().toISOString(),
+    contact_name: 'Anil Kumar',
+    contact_email: 'anil.k@relianceretail.com',
+    contact_phone: '+91 98111 54321',
+    billing_street: 'Maker Chambers IV, Nariman Point',
+    billing_city: 'Mumbai',
+    billing_state: 'Maharashtra',
+    billing_code: '400021',
+    billing_country: 'India',
+    shipping_street: 'Reliance Corporate Park, Thane-Belapur Road',
+    shipping_city: 'Navi Mumbai',
+    shipping_state: 'Maharashtra',
+    shipping_code: '400701',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-1029',
+    name: 'Titan Manufacturing Ltd.',
+    created_at: new Date().toISOString(),
+    contact_name: 'Priya Sharma',
+    contact_email: 'priya.sharma@titan.co.in',
+    contact_phone: '+91 98800 23456',
+    billing_street: 'Golden Enclave, Old Airport Road',
+    billing_city: 'Bengaluru',
+    billing_state: 'Karnataka',
+    billing_code: '560017',
+    billing_country: 'India',
+    shipping_street: 'SIPCOT Industrial Complex, Hosur',
+    shipping_city: 'Krishnagiri',
+    shipping_state: 'Tamil Nadu',
+    shipping_code: '635126',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-9285',
+    name: 'HDFC Capital Partners',
+    created_at: new Date().toISOString(),
+    contact_name: 'Vikram Patel',
+    contact_email: 'vikram.p@hdfccapital.com',
+    contact_phone: '+91 98210 98765',
+    billing_street: 'HDFC House, HT Parekh Marg, Backbay Reclamation',
+    billing_city: 'Mumbai',
+    billing_state: 'Maharashtra',
+    billing_code: '400020',
+    billing_country: 'India',
+    shipping_street: 'HDFC House, HT Parekh Marg, Backbay Reclamation',
+    shipping_city: 'Mumbai',
+    shipping_state: 'Maharashtra',
+    shipping_code: '400020',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-1920',
+    name: 'Adani Grid Solutions',
+    created_at: new Date().toISOString(),
+    contact_name: 'Siddharth Mehta',
+    contact_email: 'siddharth@adanigrid.com',
+    contact_phone: '+91 98980 11223',
+    billing_street: 'Adani Corporate House, Shantigram',
+    billing_city: 'Ahmedabad',
+    billing_state: 'Gujarat',
+    billing_code: '382421',
+    billing_country: 'India',
+    shipping_street: 'Adani Power Complex, Mundra',
+    shipping_city: 'Kutch',
+    shipping_state: 'Gujarat',
+    shipping_code: '370415',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-3041',
+    name: 'Infosys Technologies',
+    created_at: new Date().toISOString(),
+    contact_name: 'Ananya Iyer',
+    contact_email: 'ananya.iyer@infosys.com',
+    contact_phone: '+91 99000 45678',
+    billing_street: 'Electronics City, Hosur Road',
+    billing_city: 'Bengaluru',
+    billing_state: 'Karnataka',
+    billing_code: '560100',
+    billing_country: 'India',
+    shipping_street: 'Electronics City, Hosur Road',
+    shipping_city: 'Bengaluru',
+    shipping_state: 'Karnataka',
+    shipping_code: '560100',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-4921',
+    name: 'Wipro Enterprises',
+    created_at: new Date().toISOString(),
+    contact_name: 'Ramesh Kumar',
+    contact_email: 'ramesh.k@wipro.com',
+    contact_phone: '+91 98450 33445',
+    billing_street: 'Doddakannelli, Sarjapur Road',
+    billing_city: 'Bengaluru',
+    billing_state: 'Karnataka',
+    billing_code: '560035',
+    billing_country: 'India',
+    shipping_street: 'Doddakannelli, Sarjapur Road',
+    shipping_city: 'Bengaluru',
+    shipping_state: 'Karnataka',
+    shipping_code: '560035',
+    shipping_country: 'India',
+  },
+  {
+    id: 'CUST-5510',
+    name: 'L&T Construction',
+    created_at: new Date().toISOString(),
+    contact_name: 'Sunil Verma',
+    contact_email: 'sunil.v@lntecc.com',
+    contact_phone: '+91 98333 77889',
+    billing_street: 'L&T House, Ballard Estate',
+    billing_city: 'Mumbai',
+    billing_state: 'Maharashtra',
+    billing_code: '400001',
+    billing_country: 'India',
+    shipping_street: 'Mount Poonamallee Road, Manapakkam',
+    shipping_city: 'Chennai',
+    shipping_state: 'Tamil Nadu',
+    shipping_code: '600089',
+    shipping_country: 'India',
+  },
 ]
 
 const LOCAL_STORAGE_CUSTOMERS_KEY = 'pricedesk_mock_customers'

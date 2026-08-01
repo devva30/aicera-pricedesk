@@ -31,7 +31,20 @@ export async function saveCustomer(customer: Customer): Promise<Customer> {
   
   await setDoc(doc(db, 'customers', customer.id), {
     name: customer.name,
-    created_at: customer.created_at || new Date().toISOString()
+    created_at: customer.created_at || new Date().toISOString(),
+    contact_name: customer.contact_name || '',
+    contact_email: customer.contact_email || '',
+    contact_phone: customer.contact_phone || '',
+    billing_street: customer.billing_street || '',
+    billing_city: customer.billing_city || '',
+    billing_state: customer.billing_state || '',
+    billing_code: customer.billing_code || '',
+    billing_country: customer.billing_country || '',
+    shipping_street: customer.shipping_street || '',
+    shipping_city: customer.shipping_city || '',
+    shipping_state: customer.shipping_state || '',
+    shipping_code: customer.shipping_code || '',
+    shipping_country: customer.shipping_country || '',
   })
   return customer
 }

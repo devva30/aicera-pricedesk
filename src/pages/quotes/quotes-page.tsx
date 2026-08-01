@@ -262,7 +262,7 @@ export function QuotesPage() {
               <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
               Download Worksheet
             </Button>
-            {user.role === 'sales_rep' && (
+            {user?.role === 'sales_rep' && (
               <Button
                 onClick={() => navigate('/quotes/new')}
                 size="sm"
@@ -431,16 +431,30 @@ export function QuotesPage() {
                         {getRelativeTime(q.updated_at)}
                       </td>
                       <td className="p-3 pr-4">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            navigate(`/quotes/${q.id}`)
-                          }}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-primary hover:bg-primary/10 transition-colors border border-primary/20"
-                        >
-                          <Eye className="h-3 w-3" />
-                          View
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation()
+                              navigate(`/quotes/${q.id}`)
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-primary hover:bg-primary/10 transition-colors border border-primary/20"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View
+                          </button>
+                          {user && (user.role === 'sales_rep' || user.role === 'admin') && (
+                            <button
+                              onClick={e => {
+                                e.stopPropagation()
+                                navigate(`/quotes/${q.id}/edit`)
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-amber-700 hover:bg-amber-50 transition-colors border border-amber-200"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              Edit
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -490,8 +504,8 @@ export function QuotesPage() {
             description={search || statusFilter !== 'all'
               ? 'Try adjusting your search query or status filter.'
               : 'Quotes are generated when you create a pricing deal with a quote number.'}
-            actionLabel={user.role === 'sales_rep' && !search && statusFilter === 'all' ? "Create New Quote" : undefined}
-            onAction={user.role === 'sales_rep' && !search && statusFilter === 'all' ? () => navigate('/quotes/new') : undefined}
+            actionLabel={user?.role === 'sales_rep' && !search && statusFilter === 'all' ? "Create New Quote" : undefined}
+            onAction={user?.role === 'sales_rep' && !search && statusFilter === 'all' ? () => navigate('/quotes/new') : undefined}
           />
         ) : (
           <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
@@ -509,7 +523,7 @@ export function QuotesPage() {
                     <th className="p-3">Revenue</th>
                     <th className="p-3">Status</th>
                     <th className="p-3">Updated</th>
-                    {user.role !== 'sales_rep' && <th className="p-3">By</th>}
+                    {user?.role !== 'sales_rep' && <th className="p-3">By</th>}
                     <th className="p-3 pr-4">Actions</th>
                   </tr>
                 </thead>
@@ -560,7 +574,7 @@ export function QuotesPage() {
                       <td className="p-3 text-muted-foreground whitespace-nowrap">
                         {getRelativeTime(q.updated_at)}
                       </td>
-                      {user.role !== 'sales_rep' && (
+                      {user?.role !== 'sales_rep' && (
                         <td className="p-3 text-muted-foreground whitespace-nowrap">
                           {q.creator?.full_name ?? '—'}
                         </td>
@@ -577,19 +591,18 @@ export function QuotesPage() {
                             <Eye className="h-3 w-3" />
                             View
                           </button>
-                          {user.role === 'sales_rep' &&
-                            (q.status === 'draft' || q.status === 'changes_requested') && (
-                              <button
-                                onClick={e => {
-                                  e.stopPropagation()
-                                  navigate(`/quotes/${q.id}/edit`)
-                                }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-amber-700 hover:bg-amber-50 transition-colors border border-amber-200"
-                              >
-                                <Edit3 className="h-3 w-3" />
-                                Edit
-                              </button>
-                            )}
+                          {user && (user.role === 'sales_rep' || user.role === 'admin') && (
+                            <button
+                              onClick={e => {
+                                e.stopPropagation()
+                                navigate(`/quotes/${q.id}/edit`)
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-amber-700 hover:bg-amber-50 transition-colors border border-amber-200"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              Edit
+                            </button>
+                          )}
                           <button
                             onClick={e => {
                               e.stopPropagation()

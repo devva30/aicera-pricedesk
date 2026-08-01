@@ -23,7 +23,19 @@ const dealsSlice = createSlice({
   initialState,
   reducers: {
     setDeals: (state, action: PayloadAction<Deal[]>) => {
-      state.deals = action.payload
+      const incoming = action.payload || []
+      const incomingIds = new Set(incoming.map((d) => d.id))
+      const tenMinutesAgo = Date.now() - 10 * 60 * 1000
+
+      // Preserve locally added deals created/updated in the last 10 minutes
+      // so asynchronous background fetches don't wipe out freshly created items
+      const recentLocalDeals = state.deals.filter((d) => {
+        if (incomingIds.has(d.id)) return false
+        const time = new Date(d.created_at || d.updated_at || Date.now()).getTime()
+        return time > tenMinutesAgo
+      })
+
+      state.deals = [...recentLocalDeals, ...incoming]
     },
     setSelectedDeal: (state, action: PayloadAction<Deal | null>) => {
       state.selectedDeal = action.payload

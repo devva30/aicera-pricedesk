@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Check, RotateCcw, Send, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -13,11 +13,15 @@ import {
 import { canUserActOnDeal } from '@/lib/workflow'
 import {
   approveDeal,
+  directApproveDeal,
   rejectDeal,
   requestChanges,
   submitDealForApproval,
 } from '@/services/deals-service'
-import type { Deal, UserRole } from '@/types'
+import { fetchSettings } from '@/services/targets-service'
+import { fetchUsers } from '@/services/users-service'
+import { useNotificationStore } from '@/stores/notification-store'
+import type { Deal, UserRole, User } from '@/types'
 
 interface ApprovalActionsProps {
   deal: Deal
@@ -26,13 +30,26 @@ interface ApprovalActionsProps {
   onUpdate: (deal: Deal) => void
 }
 
-type ActionType = 'approve' | 'reject' | 'changes' | 'submit' | null
+type ActionType = 'approve' | 'direct_approve' | 'reject' | 'changes' | 'submit' | null
 
 export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalActionsProps) {
   const [action, setAction] = useState<ActionType>(null)
   const [comment, setComment] = useState('')
-  const [opsOwner, setOpsOwner] = useState(deal.assigned_ops_owner || 'Chetan')
+  const [opsOwner, setOpsOwner] = useState(deal.assigned_ops_owner || '')
+  const [opsUsers, setOpsUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetchUsers().then(users => {
+      const ops = users.filter(u => u.role === 'ops')
+      setOpsUsers(ops)
+      if (ops.length > 0 && !deal.assigned_ops_owner) {
+        setOpsOwner(ops[0].full_name)
+      } else if (deal.assigned_ops_owner) {
+        setOpsOwner(deal.assigned_ops_owner)
+      }
+    }).catch(err => console.error('Failed to fetch ops users:', err))
+  }, [deal.assigned_ops_owner])
 
   const canAct = canUserActOnDeal(userRole, deal.status)
   const isSalesRep = userRole === 'sales_rep' || userRole === 'admin'
@@ -49,20 +66,50 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
     try {
       let updated: Deal
       switch (action) {
-        case 'submit':
+        case 'submit': {
           updated = await submitDealForApproval(deal.id, userId, comment)
+          if (deal.is_quote_only) {
+            const settings = fetchSettings()
+            const floorMarginDecimal = settings?.floor_margin_pct ?? 0.06
+            const dealMarginDecimal = (deal.gross_margin_pct ?? 0) / 100
+            if (dealMarginDecimal >= floorMarginDecimal) {
+              toast.success('Quote submitted & auto-approved! (Above floor margin)')
+            } else {
+              toast.success('Quote submitted for approval & email notification sent to Sales Head!')
+            }
+          } else {
+            toast.success('Submitted for approval')
+          }
           break
-        case 'approve':
+        }
+        case 'approve': {
+          const selectedOps = deal.is_quote_only ? undefined : (opsOwner || (opsUsers[0]?.full_name ?? undefined))
           updated = await approveDeal(
             deal.id,
             userId,
             deal.status,
             deal.requires_technical,
             comment,
-            opsOwner
+            selectedOps
           )
-          toast.success(`Deal approved & Ops assigned to ${opsOwner}`)
+          if (deal.is_quote_only) {
+            toast.success('Quote approved!')
+          } else {
+            toast.success(selectedOps ? `Approved & Ops assigned to ${selectedOps}` : 'Approved!')
+          }
           break
+        }
+        case 'direct_approve': {
+          const selectedOps = deal.is_quote_only ? undefined : (opsOwner || (opsUsers[0]?.full_name ?? undefined))
+          updated = await directApproveDeal(
+            deal.id,
+            userId,
+            comment || 'Direct Admin Final Approval',
+            selectedOps
+          )
+          toast.success('Deal granted final Admin Approval!')
+          break
+        }
         case 'reject':
           updated = await rejectDeal(deal.id, userId, comment)
           toast.success('Deal rejected')
@@ -75,10 +122,13 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
           return
       }
       onUpdate(updated)
+      // Refresh the current user's notification bell immediately
+      useNotificationStore.getState().fetchNotifications(userId).catch(() => {})
       setAction(null)
       setComment('')
-    } catch {
-      toast.error('Action failed')
+    } catch (err: any) {
+      console.error('Approval action failed:', err)
+      toast.error(err?.message || 'Action failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -100,14 +150,18 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
             <>
               <Button onClick={() => setAction('approve')} className="bg-primary hover:bg-primary/95 text-white font-semibold h-10 px-5 w-full justify-center">
                 <Check className="h-4 w-4 mr-2" />
-                Approve
+                {deal.status === 'pending_sales_head' ? 'Approve & Finalize' : 'Approve & Route to Next Stage'}
               </Button>
-              {deal.status === 'pending_sales_head' && (
-                <Button variant="outline" onClick={() => setAction('changes')} className="border-border hover:bg-muted font-semibold h-10 px-5 w-full justify-center">
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Request Changes
+              {userRole === 'admin' && deal.status !== 'approved' && (
+                <Button onClick={() => setAction('direct_approve')} variant="secondary" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-10 px-5 w-full justify-center">
+                  <Check className="h-4 w-4 mr-2" />
+                  Direct Admin Approval (Final)
                 </Button>
               )}
+              <Button variant="outline" onClick={() => setAction('changes')} className="border-border hover:bg-muted font-semibold h-10 px-5 w-full justify-center">
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Request Changes
+              </Button>
               <Button variant="destructive" onClick={() => setAction('reject')} className="bg-red-600 hover:bg-red-700 text-white font-semibold h-10 px-5 w-full justify-center">
                 <X className="h-4 w-4 mr-2" />
                 Reject
@@ -194,20 +248,37 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
             )}
             {action === 'approve' && (
               <div className="space-y-3 mt-3">
-                {(userRole === 'sales_head' || userRole === 'admin' || deal.status === 'pending_sales_head') && (
+                {!deal.is_quote_only && (userRole === 'sales_head' || userRole === 'admin' || deal.status === 'pending_sales_head') && (
                   <div className="rounded-lg border border-sky-500/20 bg-sky-50/50 dark:bg-sky-950/20 p-3 space-y-1.5 text-left">
                     <Label className="text-xs font-bold text-sky-950 dark:text-sky-200">
                       Assign Ops Executive (Sales Ops) *
                     </Label>
-                    <select
-                      value={opsOwner}
-                      onChange={(e) => setOpsOwner(e.target.value)}
-                      className="h-9 w-full rounded-md border border-sky-300 dark:border-sky-700 bg-background px-3 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-foreground font-semibold cursor-pointer"
-                    >
-                      <option value="Chetan">Chetan</option>
-                      <option value="Bhoomika">Bhoomika</option>
-                      <option value="Deekshit">Deekshit</option>
-                    </select>
+                    {opsUsers.length > 0 ? (
+                      <select
+                        value={opsOwner}
+                        onChange={(e) => setOpsOwner(e.target.value)}
+                        className="h-9 w-full rounded-md border border-sky-300 dark:border-sky-700 bg-background px-3 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-foreground font-semibold cursor-pointer"
+                      >
+                        {opsUsers.map((u) => (
+                          <option key={u.id} value={u.full_name}>
+                            {u.full_name} ({u.email})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          value={opsOwner}
+                          onChange={(e) => setOpsOwner(e.target.value)}
+                          placeholder="Enter Ops Executive Name..."
+                          className="h-9 w-full rounded-md border border-sky-300 dark:border-sky-700 bg-background px-3 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-foreground font-medium"
+                        />
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                          No registered users with Ops Executive role found. Register an Ops user in Admin or enter a name above.
+                        </p>
+                      </div>
+                    )}
                     <p className="text-[11px] text-muted-foreground">
                       This Ops Executive will be pre-assigned when the Sales Rep sets up the order for this deal.
                     </p>
