@@ -37,7 +37,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const logout    = useAuthStore((s) => s.logout)
   const isDemo    = useAuthStore((s) => s.isDemo)
   const { theme, setTheme, applyTheme } = useThemeStore()
-  const { notifications, fetchNotifications, subscribeToLiveNotifications, markAsRead, unreadCount } = useNotificationStore()
+  const { notifications, fetchNotifications, subscribeToLiveNotifications, markAsRead, markAllRead, unreadCount } = useNotificationStore()
 
   const [pushPermission, setPushPermission] = useState<NotificationPermission>(() => {
     return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
@@ -204,43 +204,60 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-xs font-bold text-foreground">Notifications</span>
-                </div>
-                <Button
-                  variant={isMuted ? 'outline' : 'default'}
-                  size="sm"
-                  onClick={handleTogglePushAlerts}
-                  className={`h-7 text-[10px] font-semibold gap-1 px-2.5 cursor-pointer transition-colors ${
-                    isMuted
-                      ? 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                      : pushPermission === 'granted'
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                  }`}
-                  title={
-                    pushPermission !== 'granted'
-                      ? 'Click to enable desktop push alerts'
-                      : isMuted
-                      ? 'Click to enable push alerts'
-                      : 'Click to mute push alerts'
-                  }
-                >
-                  {isMuted ? (
-                    <>
-                      <BellOff className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                      Push Muted
-                    </>
-                  ) : pushPermission === 'granted' ? (
-                    <>
-                      <BellRing className="h-3 w-3" />
-                      Push Active
-                    </>
-                  ) : (
-                    <>
-                      <Bell className="h-3 w-3" />
-                      Enable Push
-                    </>
+                  {unreadCount() > 0 && (
+                    <span className="text-[10px] bg-primary/10 text-primary font-bold px-1.5 py-0.5 rounded-full">
+                      {unreadCount()} new
+                    </span>
                   )}
-                </Button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {unreadCount() > 0 && user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => markAllRead(user.id)}
+                      className="h-7 text-[10px] font-semibold text-muted-foreground hover:text-foreground px-2 cursor-pointer"
+                    >
+                      Mark all read
+                    </Button>
+                  )}
+                  <Button
+                    variant={isMuted ? 'outline' : 'default'}
+                    size="sm"
+                    onClick={handleTogglePushAlerts}
+                    className={`h-7 text-[10px] font-semibold gap-1 px-2.5 cursor-pointer transition-colors ${
+                      isMuted
+                        ? 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                        : pushPermission === 'granted'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    }`}
+                    title={
+                      pushPermission !== 'granted'
+                        ? 'Click to enable desktop push alerts'
+                        : isMuted
+                        ? 'Click to enable push alerts'
+                        : 'Click to mute push alerts'
+                    }
+                  >
+                    {isMuted ? (
+                      <>
+                        <BellOff className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                        Muted
+                      </>
+                    ) : pushPermission === 'granted' ? (
+                      <>
+                        <BellRing className="h-3 w-3" />
+                        Active
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="h-3 w-3" />
+                        Enable
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div className="max-h-80 overflow-y-auto divide-y divide-border/60">
@@ -249,7 +266,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
                     No new notifications. Everything is up to date!
                   </div>
                 ) : (
-                  notifications.slice(0, 6).map((n) => {
+                  notifications.slice(0, 20).map((n) => {
                     const isQuoteNotif = n.title?.includes('Quotation') || n.title?.includes('Quote') || n.title?.includes('QT-') || n.message?.includes('QT-') || n.message?.includes('Quotation') || n.message?.includes('Quote')
                     const targetPath = isQuoteNotif ? `/quotes/${n.deal_id}` : `/deals/${n.deal_id}`
 

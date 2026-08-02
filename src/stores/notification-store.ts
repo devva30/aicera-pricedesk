@@ -111,40 +111,50 @@ export const useNotificationStore = create<NotificationState>((set, get) => {
     // ─── Mark as read ─────────────────────────────────────────────────────────
     markAsRead: async (id) => {
       set({
-        notifications: get().notifications.filter((n) => n.id !== id),
+        notifications: get().notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
       })
 
       if (useAuthStore.getState().isDemo) {
         const idx = MOCK_NOTIFICATIONS.findIndex((x) => x.id === id)
         if (idx !== -1) {
-          MOCK_NOTIFICATIONS.splice(idx, 1)
+          MOCK_NOTIFICATIONS[idx].is_read = true
           persistMockNotifications()
         }
         return
       }
 
-      await deleteDoc(doc(db, 'notifications', id))
+      try {
+        const { doc, updateDoc } = await import('firebase/firestore')
+        await updateDoc(doc(db, 'notifications', id), { is_read: true })
+      } catch (e) {
+        console.error('Failed to mark notification as read in Firestore:', e)
+      }
     },
 
     // ─── Mark all read ────────────────────────────────────────────────────────
     markAllRead: async (userId) => {
-      set({ notifications: [] })
+      set({
+        notifications: get().notifications.map((n) => ({ ...n, is_read: true })),
+      })
 
       if (useAuthStore.getState().isDemo) {
-        for (let i = MOCK_NOTIFICATIONS.length - 1; i >= 0; i--) {
-          if (MOCK_NOTIFICATIONS[i].user_id === userId) {
-            MOCK_NOTIFICATIONS.splice(i, 1)
-          }
-        }
+        MOCK_NOTIFICATIONS.forEach((n) => {
+          n.is_read = true
+        })
         persistMockNotifications()
         return
       }
 
-      const q = query(collection(db, 'notifications'), where('user_id', '==', userId))
-      const snap = await import('firebase/firestore').then(({ getDocs }) => getDocs(q))
-      const batch = writeBatch(db)
-      snap.forEach((d) => batch.delete(d.ref))
-      await batch.commit()
+      try {
+        const { getDocs, updateDoc, writeBatch } = await import('firebase/firestore')
+        const q = query(collection(db, 'notifications'), where('user_id', '==', userId))
+        const snap = await getDocs(q)
+        const batch = writeBatch(db)
+        snap.forEach((d) => batch.update(d.ref, { is_read: true }))
+        await batch.commit()
+      } catch (e) {
+        console.error('Failed to mark all notifications as read in Firestore:', e)
+      }
     },
   }
 })

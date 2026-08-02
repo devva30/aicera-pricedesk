@@ -856,6 +856,23 @@ export function appendMockNotification(notif: Omit<Notification, 'id' | 'created
     try { listener(newNotif) } catch { /* ignore */ }
   }
 
+  // Persist to Firestore if live Firebase is active
+  try {
+    const isFirebase = Boolean(
+      import.meta.env.VITE_FIREBASE_API_KEY &&
+      import.meta.env.VITE_FIREBASE_API_KEY !== 'placeholder-key'
+    )
+    if (isFirebase) {
+      import('./firebase').then(({ db }) => {
+        import('firebase/firestore').then(({ doc, setDoc }) => {
+          setDoc(doc(db, 'notifications', newNotif.id), newNotif).catch(console.error)
+        })
+      })
+    }
+  } catch (e) {
+    console.error('Error writing notification to Firestore:', e)
+  }
+
   // Trigger Browser Push Notification
   try {
     import('./audio-notifications').then(({ showBrowserNotification }) => {
