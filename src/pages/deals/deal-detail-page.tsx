@@ -98,7 +98,7 @@ export function DealDetailPage() {
             console.error('Failed to load deal audit trail:', err)
             return []
           }),
-          (!isQuoteView ? fetchQuotesByDealId(id) : Promise.resolve([])).catch((err) => {
+          (!isQuoteView ? fetchQuotesByDealId(id, dealFromStore || deal) : Promise.resolve([])).catch((err) => {
             console.error('Failed to load child quotes:', err)
             return []
           })
@@ -117,7 +117,12 @@ export function DealDetailPage() {
           setDeal(null)
         }
         setAudit(a)
-        setChildQuotes(qs)
+        if (!isQuoteView && finalDeal && qs.length === 0) {
+          const resolvedQuotes = await fetchQuotesByDealId(id, finalDeal)
+          setChildQuotes(resolvedQuotes)
+        } else {
+          setChildQuotes(qs)
+        }
       } catch (err) {
         console.error('Failed to load deal details:', err)
         toast.error('Failed to load deal details. Check database indexes.')

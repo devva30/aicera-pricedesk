@@ -156,21 +156,94 @@ export async function fetchQuotes(role: UserRole, userId: string): Promise<Deal[
   return filterDealsByRole(list, role, userId)
 }
 
-export async function fetchQuotesByDealId(dealId: string): Promise<Deal[]> {
-  if (useAuthStore.getState().isDemo) {
-    return MOCK_QUOTES.filter((q) => q.parent_deal_id === dealId)
+export async function fetchQuotesByDealId(dealId: string, dealObj?: Deal | null): Promise<Deal[]> {
+  const targetDeal = dealObj || await fetchDealById(dealId).catch(() => null)
+  const dealNumber = targetDeal?.deal_number
+  const quoteNumber = targetDeal?.quote_number
+  const parentId = targetDeal?.parent_deal_id
+
+  const quotesMap = new Map<string, Deal>()
+
+  const isMatchingQuote = (q: Deal) => {
+    if (!q) return false
+    if (q.parent_deal_id && (q.parent_deal_id === dealId || (dealNumber && q.parent_deal_id === dealNumber))) return true
+    if (quoteNumber && (q.quote_number === quoteNumber || q.deal_number === quoteNumber || q.id === quoteNumber)) return true
+    if (parentId && (q.id === parentId || q.quote_number === parentId || q.deal_number === parentId)) return true
+    return false
   }
 
-  const quotesCol = collection(db, 'quotes')
-  const q = query(quotesCol, where('parent_deal_id', '==', dealId))
-  const snap = await getDocs(q)
-  const list: Deal[] = []
+  // 1. Check MOCK_QUOTES
+  MOCK_QUOTES.filter(isMatchingQuote).forEach((q) => quotesMap.set(q.id || q.quote_number || q.deal_number, q))
 
-  snap.forEach((doc) => {
-    list.push({ id: doc.id, ...doc.data() } as Deal)
-  })
+  // 2. Check Redux store
+  try {
+    const { store } = await import('@/store')
+    const stateDeals = (store.getState()?.deals?.deals || []) as Deal[]
+    stateDeals.filter((d) => d.is_quote_only && isMatchingQuote(d)).forEach((q) => {
+      quotesMap.set(q.id || q.quote_number || q.deal_number, q)
+    })
+  } catch {}
 
-  return list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+  // 3. Query Firestore if Firebase is configured
+  if (isFirebaseConfigured() && !useAuthStore.getState().isDemo) {
+    try {
+      const quotesCol = collection(db, 'quotes')
+
+      // Query 1: by parent_deal_id == dealId
+      const q1 = query(quotesCol, where('parent_deal_id', '==', dealId))
+      const snap1 = await getDocs(q1)
+      snap1.forEach((doc) => quotesMap.set(doc.id, { id: doc.id, ...doc.data() } as Deal))
+
+      // Query 2: by parent_deal_id == dealNumber
+      if (dealNumber && dealNumber !== dealId) {
+        const q2 = query(quotesCol, where('parent_deal_id', '==', dealNumber))
+        const snap2 = await getDocs(q2)
+        snap2.forEach((doc) => quotesMap.set(doc.id, { id: doc.id, ...doc.data() } as Deal))
+      }
+
+      // Query 3: by quote_number == quoteNumber
+      if (quoteNumber) {
+        const q3 = query(quotesCol, where('quote_number', '==', quoteNumber))
+        const snap3 = await getDocs(q3)
+        snap3.forEach((doc) => quotesMap.set(doc.id, { id: doc.id, ...doc.data() } as Deal))
+
+        const q4 = query(quotesCol, where('deal_number', '==', quoteNumber))
+        const snap4 = await getDocs(q4)
+        snap4.forEach((doc) => quotesMap.set(doc.id, { id: doc.id, ...doc.data() } as Deal))
+      }
+    } catch (err) {
+      console.error('fetchQuotesByDealId Firestore query error:', err)
+    }
+  }
+
+  const result = Array.from(quotesMap.values())
+
+  // 4. Synthesize linked quote if deal has a quote_number set but no child quote doc exists
+  if (result.length === 0 && targetDeal && targetDeal.quote_number) {
+    result.push({
+      ...targetDeal,
+      id: targetDeal.quote_number,
+      quote_number: targetDeal.quote_number,
+      deal_number: targetDeal.quote_number,
+      parent_deal_id: targetDeal.id,
+      title: `${targetDeal.title} (Quotation)`,
+      customer_name: targetDeal.customer_name,
+      customer_id: targetDeal.customer_id,
+      total_revenue: targetDeal.total_revenue,
+      total_cost: targetDeal.total_cost,
+      gross_margin_pct: targetDeal.gross_margin_pct,
+      net_margin_pct: targetDeal.net_margin_pct,
+      status: targetDeal.status,
+      currency: targetDeal.currency || 'INR',
+      created_at: targetDeal.created_at,
+      updated_at: targetDeal.updated_at,
+      is_quote_only: true,
+      items: targetDeal.items || [],
+      overheads: targetDeal.overheads || [],
+    })
+  }
+
+  return result.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime())
 }
 
 import { deleteOrdersByDealId } from './orders-service'
