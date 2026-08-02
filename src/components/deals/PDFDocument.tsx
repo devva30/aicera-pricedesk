@@ -930,8 +930,8 @@ export function QuotePDFDocument({ deal, settings: propSettings }: { deal: Deal;
           {/* Annexure Header */}
           <View style={styles.annexureHeaderRow}>
             <View style={styles.annexureTitleBlock}>
-              <Text style={styles.annexureTitle}>Bill of Material (BOM) &amp; Technical Specifications</Text>
-              <Text style={styles.annexureSubtitle}>Technical Specifications, SLA &amp; Timeline Details</Text>
+              <Text style={styles.annexureTitle}>Bill of Material (BOM)</Text>
+              <Text style={styles.annexureSubtitle}>SLA &amp; Timeline Details</Text>
             </View>
             <View style={styles.annexureMetaBlock}>
               <Text style={styles.annexureMetaText}>{docNumberLabel}: {quoteNo}</Text>
