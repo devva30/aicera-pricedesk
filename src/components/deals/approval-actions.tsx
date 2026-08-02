@@ -39,7 +39,13 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
   const [opsUsers, setOpsUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
 
+  const [settings, setSettings] = useState<any>(null)
+
   useEffect(() => {
+    try {
+      const s = fetchSettings()
+      setSettings(s)
+    } catch {}
     fetchUsers().then(users => {
       const ops = users.filter(u => u.role === 'ops')
       setOpsUsers(ops)
@@ -243,7 +249,15 @@ export function ApprovalActions({ deal, userRole, userId, onUpdate }: ApprovalAc
             />
             {action === 'submit' && (
               <p className="text-[11px] text-muted-foreground mt-2">
-                This will route the deal to Finance for review.
+                {deal.is_quote_only ? (
+                  ((deal.gross_margin_pct ?? 0) / 100) >= (settings?.floor_margin_pct ?? 0.06)
+                    ? 'This quotation is above floor margin and will be automatically approved upon submission.'
+                    : 'This quotation is below floor margin and will route to Sales Head for approval.'
+                ) : (
+                  deal.requires_technical
+                    ? 'This will route the deal for Technical Review.'
+                    : 'This will route the deal for Finance Review.'
+                )}
               </p>
             )}
             {action === 'approve' && (

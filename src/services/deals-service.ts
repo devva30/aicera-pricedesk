@@ -344,66 +344,161 @@ export async function deleteQuote(id: string, deletedBy?: string): Promise<void>
 }
 
 export async function fetchDealById(id: string): Promise<Deal | null> {
-  // 1. First check Redux store for instantaneous match (avoids network flash / latency)
-  try {
-    const { store } = await import('@/store')
-    const stateDeals = store.getState()?.deals?.deals || []
-    const reduxMatch = stateDeals.find((d: Deal) => d.id === id || d.deal_number === id || d.quote_number === id)
-    if (reduxMatch) return reduxMatch
-  } catch {}
+  const baseId = id.replace(/-v\d+$/, '')
+  let resultDeal: Deal | null = null
 
-  // 2. Check local mock storage cache
-  const mockDeal = MOCK_DEALS.find((d) => d.id === id || d.deal_number === id || d.quote_number === id)
-  if (mockDeal) return mockDeal
-  const mockQuote = MOCK_QUOTES.find((q) => q.id === id || q.deal_number === id || q.quote_number === id)
-  if (mockQuote) return mockQuote
-
-  // 3. Query Firestore if Firebase is configured
+  // 1. Query Firestore first if Firebase is configured and not in demo mode
   if (isFirebaseConfigured() && !useAuthStore.getState().isDemo) {
     try {
       let docSnap = await getDoc(doc(db, 'deals', id))
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Deal
+        resultDeal = { id: docSnap.id, ...docSnap.data() } as Deal
       }
 
-      docSnap = await getDoc(doc(db, 'quotes', id))
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Deal
+      if (!resultDeal) {
+        docSnap = await getDoc(doc(db, 'quotes', id))
+        if (docSnap.exists()) {
+          resultDeal = { id: docSnap.id, ...docSnap.data() } as Deal
+        }
       }
 
-      let q = query(collection(db, 'deals'), where('deal_number', '==', id))
-      let snap = await getDocs(q)
-      if (!snap.empty) {
-        const d = snap.docs[0]
-        return { id: d.id, ...d.data() } as Deal
-      }
+      const searchIds = Array.from(new Set([id, baseId]))
+      for (const searchId of searchIds) {
+        if (resultDeal) break
 
-      q = query(collection(db, 'deals'), where('quote_number', '==', id))
-      snap = await getDocs(q)
-      if (!snap.empty) {
-        const d = snap.docs[0]
-        return { id: d.id, ...d.data() } as Deal
-      }
+        let q = query(collection(db, 'deals'), where('deal_number', '==', searchId))
+        let snap = await getDocs(q)
+        if (!snap.empty) {
+          resultDeal = { id: snap.docs[0].id, ...snap.docs[0].data() } as Deal
+          break
+        }
 
-      q = query(collection(db, 'quotes'), where('deal_number', '==', id))
-      snap = await getDocs(q)
-      if (!snap.empty) {
-        const d = snap.docs[0]
-        return { id: d.id, ...d.data() } as Deal
-      }
+        q = query(collection(db, 'deals'), where('quote_number', '==', searchId))
+        snap = await getDocs(q)
+        if (!snap.empty) {
+          resultDeal = { id: snap.docs[0].id, ...snap.docs[0].data() } as Deal
+          break
+        }
 
-      q = query(collection(db, 'quotes'), where('quote_number', '==', id))
-      snap = await getDocs(q)
-      if (!snap.empty) {
-        const d = snap.docs[0]
-        return { id: d.id, ...d.data() } as Deal
+        q = query(collection(db, 'quotes'), where('deal_number', '==', searchId))
+        snap = await getDocs(q)
+        if (!snap.empty) {
+          resultDeal = { id: snap.docs[0].id, ...snap.docs[0].data() } as Deal
+          break
+        }
+
+        q = query(collection(db, 'quotes'), where('quote_number', '==', searchId))
+        snap = await getDocs(q)
+        if (!snap.empty) {
+          resultDeal = { id: snap.docs[0].id, ...snap.docs[0].data() } as Deal
+          break
+        }
       }
     } catch (e: any) {
-      console.error('fetchDealById error:', e?.code, e?.message, e)
+      console.error('fetchDealById Firestore error:', e?.code, e?.message, e)
     }
   }
 
-  return null
+  // 2. Check Redux store as fallback
+  if (!resultDeal) {
+    try {
+      const { store } = await import('@/store')
+      const stateDeals = (store.getState()?.deals?.deals || []) as Deal[]
+      const reduxMatch = stateDeals.find(
+        (d: Deal) =>
+          d.id === id ||
+          d.deal_number === id ||
+          d.quote_number === id ||
+          d.id === baseId ||
+          d.deal_number === baseId ||
+          d.quote_number === baseId
+      )
+      if (reduxMatch) resultDeal = reduxMatch
+    } catch {}
+  }
+
+  // 3. Check local mock storage cache as fallback
+  if (!resultDeal) {
+    const mockDeal = MOCK_DEALS.find(
+      (d) =>
+        d.id === id ||
+        d.deal_number === id ||
+        d.quote_number === id ||
+        d.id === baseId ||
+        d.deal_number === baseId ||
+        d.quote_number === baseId
+    )
+    if (mockDeal) {
+      resultDeal = mockDeal
+    } else {
+      const mockQuote = MOCK_QUOTES.find(
+        (q) =>
+          q.id === id ||
+          q.deal_number === id ||
+          q.quote_number === id ||
+          q.id === baseId ||
+          q.deal_number === baseId ||
+          q.quote_number === baseId
+      )
+      if (mockQuote) resultDeal = mockQuote
+    }
+  }
+
+  // If deal found but missing bom_data, inherit from linked quote if available
+  if (resultDeal && !resultDeal.is_quote_only && (!resultDeal.bom_data || resultDeal.bom_data.length === 0)) {
+    const qNum = resultDeal.quote_number || resultDeal.parent_deal_id
+    if (qNum) {
+      // Check mock data first
+      const linkedQuote = MOCK_QUOTES.find((q) => q.quote_number === qNum || q.deal_number === qNum || q.id === qNum)
+      if (linkedQuote?.bom_data && linkedQuote.bom_data.length > 0) {
+        resultDeal = {
+          ...resultDeal,
+          bom_data: linkedQuote.bom_data,
+          sla_data: resultDeal.sla_data || linkedQuote.sla_data,
+          timeline_data: resultDeal.timeline_data || linkedQuote.timeline_data,
+        }
+      } else if (isFirebaseConfigured() && !useAuthStore.getState().isDemo) {
+        // Check Firestore for the linked quote
+        try {
+          // Try quotes collection first
+          let linkedQSnap = await getDoc(doc(db, 'quotes', qNum)).catch(() => null)
+          if (!linkedQSnap?.exists()) {
+            const qSnaps = await Promise.all([
+              getDocs(query(collection(db, 'quotes'), where('quote_number', '==', qNum))),
+              getDocs(query(collection(db, 'quotes'), where('deal_number', '==', qNum))),
+              getDocs(query(collection(db, 'deals'), where('quote_number', '==', qNum))),
+            ])
+            const found = qSnaps.find((s) => !s.empty)
+            if (found && !found.empty) {
+              const firestoreQuote = { id: found.docs[0].id, ...found.docs[0].data() } as Deal
+              if (firestoreQuote.bom_data && (firestoreQuote.bom_data as any[]).length > 0) {
+                resultDeal = {
+                  ...resultDeal,
+                  bom_data: firestoreQuote.bom_data,
+                  sla_data: resultDeal.sla_data || firestoreQuote.sla_data,
+                  timeline_data: resultDeal.timeline_data || firestoreQuote.timeline_data,
+                }
+              }
+            }
+          } else {
+            const firestoreQuote = { id: linkedQSnap.id, ...linkedQSnap.data() } as Deal
+            if (firestoreQuote.bom_data && (firestoreQuote.bom_data as any[]).length > 0) {
+              resultDeal = {
+                ...resultDeal,
+                bom_data: firestoreQuote.bom_data,
+                sla_data: resultDeal.sla_data || firestoreQuote.sla_data,
+                timeline_data: resultDeal.timeline_data || firestoreQuote.timeline_data,
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to inherit BOM from linked quote:', e)
+        }
+      }
+    }
+  }
+
+  return resultDeal
 }
 
 export async function fetchDealAudit(dealId: string): Promise<DealAudit[]> {
@@ -907,20 +1002,19 @@ export async function submitDealForApproval(dealId: string, userId: string, comm
   const resolvedId = deal.id
   const isResubmission = deal.status === 'changes_requested' || Boolean(deal.previous_versions && deal.previous_versions.length > 0)
 
-  // Quotations bypass Tech/Finance review and route to Sales Head if below floor margin or resubmitted, or auto-approve if >= floor margin
+  // Quotations: if above/equal floor margin, auto-approve! If below floor margin, route to Sales Head for approval
   if (deal.is_quote_only) {
     const settings = fetchSettings()
     const floorMarginDecimal = settings?.floor_margin_pct ?? 0.06
     const quoteMarginDecimal = (deal.gross_margin_pct ?? 0) / 100
-    const isBelowFloorMargin = quoteMarginDecimal < floorMarginDecimal
 
-    if (isBelowFloorMargin || isResubmission) {
-      const actionComment = comment || (isResubmission ? 'Resubmitted edited quotation for Sales Head approval' : 'Submitted for Sales Head approval (below floor margin)')
-      return transitionDeal(resolvedId, 'pending_sales_head', 'submitted', userId, actionComment)
-    } else {
-      const actionComment = comment || 'Auto-approved (above floor margin)'
+    if (quoteMarginDecimal >= floorMarginDecimal) {
+      const actionComment = comment || 'Auto-approved (Above floor margin)'
       return transitionDeal(resolvedId, 'approved', 'approved', userId, actionComment)
     }
+
+    const actionComment = comment || (isResubmission ? 'Resubmitted quotation for Sales Head approval' : 'Submitted for Sales Head approval (Below floor margin)')
+    return transitionDeal(resolvedId, 'pending_sales_head', 'submitted', userId, actionComment)
   }
 
   // Full Deal workflow: Technical Review -> Finance Review -> Sales Head Review -> Approved
@@ -1503,6 +1597,11 @@ async function transitionDeal(
   }
 
   await setDoc(dealRef, sanitizeForFirestore(updated))
+  if (updated.is_quote_only) {
+    updateMockQuote(updated.id, updated)
+  } else {
+    updateMockDeal(updated.id, updated)
+  }
 
   // Sync parent Deal to Approved status when its child Quote is approved
   if (isQuoteCollection && toStatus === 'approved' && updated.parent_deal_id) {

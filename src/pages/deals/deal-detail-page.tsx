@@ -84,7 +84,7 @@ export function DealDetailPage() {
 
 
   useEffect(() => {
-    import('@/services/targets-service').then(m => m.fetchSettings()).then(setSettings).catch(() => { })
+    import('@/services/targets-service').then(m => setSettings(m.fetchSettings())).catch(() => { })
   }, [])
 
   useEffect(() => {
@@ -104,21 +104,44 @@ export function DealDetailPage() {
           })
         ])
         const finalDeal = d || dealFromStore || deal
+
         if (!finalDeal && retries > 0) {
           // Firestore may not have committed the write yet — retry after a short delay
           console.warn(`Deal not found on attempt, retrying... (${retries} left)`)
-          setTimeout(() => load(retries - 1), 800)
-          return
+          await new Promise((resolve) => setTimeout(resolve, 800))
+          return await load(retries - 1)
         }
-        if (finalDeal) {
-          setDeal(finalDeal)
-          dispatch(updateDeal(finalDeal))
+
+        let finalDealWithBom = finalDeal
+        if (
+          finalDeal &&
+          !finalDeal.is_quote_only &&
+          (!finalDeal.bom_data || (finalDeal.bom_data as any[]).length === 0)
+        ) {
+          const linkedQNum = finalDeal.quote_number || finalDeal.parent_deal_id
+          if (linkedQNum) {
+            // Try to fetch the linked quote to inherit its BOM
+            const linkedQuote = await fetchDealById(linkedQNum).catch(() => null)
+            if (linkedQuote?.bom_data && (linkedQuote.bom_data as any[]).length > 0) {
+              finalDealWithBom = {
+                ...finalDeal,
+                bom_data: linkedQuote.bom_data,
+                sla_data: finalDeal.sla_data || linkedQuote.sla_data,
+                timeline_data: finalDeal.timeline_data || linkedQuote.timeline_data,
+              }
+            }
+          }
+        }
+
+        if (finalDealWithBom) {
+          setDeal(finalDealWithBom)
+          dispatch(updateDeal(finalDealWithBom))
         } else if (!deal) {
           setDeal(null)
         }
         setAudit(a)
-        if (!isQuoteView && finalDeal && qs.length === 0) {
-          const resolvedQuotes = await fetchQuotesByDealId(id, finalDeal)
+        if (!isQuoteView && finalDealWithBom && qs.length === 0) {
+          const resolvedQuotes = await fetchQuotesByDealId(id, finalDealWithBom)
           setChildQuotes(resolvedQuotes)
         } else {
           setChildQuotes(qs)
@@ -193,13 +216,14 @@ export function DealDetailPage() {
 
   const handleDownloadPDF = async () => {
     if (!deal) return
-    const toastId = toast.loading('Generating PDF proposal...')
+    const toastId = toast.loading('Generating PDF document...')
     try {
       const blob = await pdf(<QuotePDFDocument deal={deal} settings={settings} />).toBlob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Proposal_${deal.quote_number || deal.deal_number}.pdf`
+      const prefix = deal.is_quote_only ? 'Quotation' : 'Deal'
+      a.download = `${prefix}_${deal.quote_number || deal.deal_number || deal.id}.pdf`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

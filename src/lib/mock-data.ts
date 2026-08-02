@@ -552,9 +552,22 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
 ]
 
 export function updateMockDeal(id: string, updates: Partial<Deal>) {
-  const index = MOCK_DEALS.findIndex((d) => d.id === id)
+  const index = MOCK_DEALS.findIndex((d) => d.id === id || d.deal_number === id || d.quote_number === id)
   if (index !== -1) {
     MOCK_DEALS[index] = { ...MOCK_DEALS[index], ...updates }
+  } else {
+    const qIdx = MOCK_QUOTES.findIndex((q) => q.id === id || q.deal_number === id || q.quote_number === id)
+    if (qIdx !== -1) {
+      const updated = { ...MOCK_QUOTES[qIdx], ...updates }
+      if (!updated.is_quote_only) {
+        MOCK_QUOTES.splice(qIdx, 1)
+        persistMockQuotes()
+        MOCK_DEALS.unshift(updated)
+      } else {
+        MOCK_QUOTES[qIdx] = updated
+        persistMockQuotes()
+      }
+    }
   }
   persistMockDeals()
 }
@@ -579,7 +592,17 @@ export function deleteMockDeal(id: string) {
 }
 
 export function addMockDeal(deal: Deal) {
-  MOCK_DEALS.unshift(deal)
+  const qIdx = MOCK_QUOTES.findIndex((q) => q.id === deal.id || (deal.deal_number && q.deal_number === deal.deal_number))
+  if (qIdx !== -1) {
+    MOCK_QUOTES.splice(qIdx, 1)
+    persistMockQuotes()
+  }
+  const dIdx = MOCK_DEALS.findIndex((d) => d.id === deal.id || (deal.deal_number && d.deal_number === deal.deal_number))
+  if (dIdx !== -1) {
+    MOCK_DEALS[dIdx] = deal
+  } else {
+    MOCK_DEALS.unshift(deal)
+  }
   persistMockDeals()
 }
 
@@ -758,9 +781,32 @@ export function persistMockQuotes() {
 }
 
 export function updateMockQuote(id: string, updates: Partial<Deal>) {
-  const index = MOCK_QUOTES.findIndex((q) => q.id === id)
+  const index = MOCK_QUOTES.findIndex((q) => q.id === id || q.deal_number === id || q.quote_number === id)
   if (index !== -1) {
-    MOCK_QUOTES[index] = { ...MOCK_QUOTES[index], ...updates }
+    const updated = { ...MOCK_QUOTES[index], ...updates }
+    if (!updated.is_quote_only) {
+      MOCK_QUOTES.splice(index, 1)
+      persistMockQuotes()
+      MOCK_DEALS.unshift(updated)
+      persistMockDeals()
+      return
+    }
+    MOCK_QUOTES[index] = updated
+  } else {
+    const dIdx = MOCK_DEALS.findIndex((d) => d.id === id || d.deal_number === id || d.quote_number === id)
+    if (dIdx !== -1) {
+      const updated = { ...MOCK_DEALS[dIdx], ...updates }
+      if (updated.is_quote_only) {
+        MOCK_DEALS.splice(dIdx, 1)
+        persistMockDeals()
+        MOCK_QUOTES.unshift(updated)
+        persistMockQuotes()
+        return
+      }
+      MOCK_DEALS[dIdx] = updated
+      persistMockDeals()
+      return
+    }
   }
   persistMockQuotes()
 }

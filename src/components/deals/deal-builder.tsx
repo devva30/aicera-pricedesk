@@ -149,7 +149,8 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
       if (!currentUser) return
       try {
         const quoteList = await fetchQuotes(currentUser.role, currentUser.id)
-        setQuotes(quoteList)
+        const approvedQuotes = quoteList.filter((q) => q.status === 'approved')
+        setQuotes(approvedQuotes)
       } catch (e) {
         console.error('Failed to load quotes for dropdown:', e)
       }
@@ -777,7 +778,7 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
                     >
                       {quotes.length === 0 ? (
                         <div className="px-3 py-4 text-xs text-muted-foreground italic text-center">
-                          No quotes available.
+                          No approved quotes available.
                         </div>
                       ) : (
                         <div className="py-1">

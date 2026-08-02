@@ -164,8 +164,8 @@ export function QuoteNewPage() {
 
   // BOM / SLA / Timeline
   const [bomData, setBomData] = useState<BOMItem[]>([])
-  const [slaData, setSlaData] = useState('SLA: ArctiCare Next Business Day Warranty\nSupport Type: Onsite Hardware Replacement + Remote technical assistance\nSupport Contact: Dedicated support contact')
-  const [timelineData, setTimelineData] = useState('Delivery: 4-5 weeks\nInstallation Scope: Racking and Stacking')
+  const [slaData, setSlaData] = useState('')
+  const [timelineData, setTimelineData] = useState('')
   const [advancedTab, setAdvancedTab] = useState<'bom' | 'sla' | 'timeline'>('bom')
   const [pasteModalOpen, setPasteModalOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
@@ -695,7 +695,7 @@ export function QuoteNewPage() {
         terms_conditions: terms,
         declaration,
         validity_period: safeNum(validityDays),
-        bom_data: finalBom,
+        bom_data: bomData,  // Only save user-uploaded BOM — never auto-generated from line items
         sla_data: slaData,
         timeline_data: timelineData,
         previous_versions: newVersions,
