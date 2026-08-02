@@ -310,22 +310,37 @@ export function QuoteNewPage() {
       'description': 'description',
       'desc': 'description',
       'item': 'description',
+      'items': 'description',
       'item description': 'description',
+      'item_description': 'description',
       'product': 'description',
       'product description': 'description',
+      'product_description': 'description',
       'product name': 'description',
+      'product_name': 'description',
       'specification': 'description',
+      'specifications': 'description',
+      'technical specification': 'description',
+      'technical specifications': 'description',
       'spec': 'description',
+      'specs': 'description',
+      'particular': 'description',
       'particulars': 'description',
       'details': 'description',
       'name': 'description',
       'component': 'description',
+      'equipment': 'description',
+      'material': 'description',
+      'bom item': 'description',
+      'bom_item': 'description',
+      'scope of work': 'description',
 
       'module': 'module',
       'category': 'module',
       'group': 'module',
       'component group': 'module',
       'type': 'module',
+      'sub-system': 'module',
 
       'qty': 'quantity',
       'quantity': 'quantity',
@@ -334,6 +349,8 @@ export function QuoteNewPage() {
       'no': 'quantity',
       'nos': 'quantity',
       'no.': 'quantity',
+      'qty.': 'quantity',
+      'qnty': 'quantity',
 
       'part number': 'part_number',
       'part_number': 'part_number',
@@ -360,7 +377,7 @@ export function QuoteNewPage() {
     let maxKnownCount = 0
     let colMap: Array<{ typedField?: keyof BOMItem; rawHeader: string }> = []
 
-    for (let r = 0; r < Math.min(rows.length, 15); r++) {
+    for (let r = 0; r < Math.min(rows.length, 25); r++) {
       const candidateRow = rows[r]
       if (!candidateRow || !Array.isArray(candidateRow)) continue
 
@@ -381,28 +398,37 @@ export function QuoteNewPage() {
     const parsed: BOMItem[] = []
 
     dataRows.forEach((row) => {
-      if (!row || !Array.isArray(row) || row.every((c: any) => c === null || c === undefined || String(c).trim() === '')) return
+      if (!row || !Array.isArray(row)) return
+      const cleanCells = row.map((c: any) => String(c || '').trim()).filter(Boolean)
+      if (cleanCells.length === 0) return
 
       if (!hasHeader) {
-        const [col0, col1, col2, col3, col4] = row.map((c: any) => String(c || '').trim())
-        if (!col0 && !col1) return
+        // Position-based fallback: filter out serial numbers if present
+        const cells = row.map((c: any) => String(c || '').trim())
+        // Ignore row if it's a title header row
+        if (cells.every((c) => c.toLowerCase().includes('bill of material') || c.toLowerCase().includes('annexure'))) return
 
-        if (!col1 && col0) {
-          currentSection = col0
-          return
+        // Skip leading S.No / index cell if first cell is a number
+        let startIndex = 0
+        if (cells.length >= 3 && /^\d+$/.test(cells[0])) {
+          startIndex = 1
         }
 
-        const description = col1 || col0
-        const moduleVal = col1 ? col0 : ''
-        const qtyVal = safeNum(col2) || 1
+        const colA = cells[startIndex] || ''
+        const colB = cells[startIndex + 1] || ''
+        const colC = cells[startIndex + 2] || ''
+
+        if (!colA && !colB) return
+
+        const moduleVal = colB ? colA : ''
+        const description = colB || colA
+        const qtyVal = safeNum(colC) || 1
 
         parsed.push({
           section: currentSection,
           module: moduleVal,
           description: description,
           quantity: qtyVal,
-          part_number: col3 || undefined,
-          brand: col4 || undefined,
         })
         return
       }
@@ -817,645 +843,645 @@ export function QuoteNewPage() {
         className="max-w-5xl mx-auto space-y-6 pb-32"
       >
 
-          {/* ── 1. Basic Information ── */}
-          <SectionCard
-            iconBg="bg-indigo-600"
-            icon={<FileText className="h-4.5 w-4.5 text-white" />}
-            title="Basic Information"
-            subtitle="Proposal details and client"
-            className="z-50 relative"
-          >
-            <div className="space-y-4">
-              {/* Proposal Title */}
+        {/* ── 1. Basic Information ── */}
+        <SectionCard
+          iconBg="bg-indigo-600"
+          icon={<FileText className="h-4.5 w-4.5 text-white" />}
+          title="Basic Information"
+          subtitle="Proposal details and client"
+          className="z-50 relative"
+        >
+          <div className="space-y-4">
+            {/* Proposal Title */}
+            <div>
+              <FieldLabel required>Proposal Title / Subject</FieldLabel>
+              <StyledInput
+                placeholder="e.g. IT Infrastructure Modernization — ABC Pvt Ltd"
+                value={proposalTitle}
+                onChange={e => setProposalTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Client */}
               <div>
-                <FieldLabel required>Proposal Title / Subject</FieldLabel>
+                <FieldLabel required>Client (Account Name)</FieldLabel>
+                <div className="relative" ref={clientRef}>
+                  <StyledInput
+                    placeholder="Select or type client name..."
+                    value={clientSearch}
+                    onChange={e => { setClientSearch(e.target.value); setClientId(''); setClientOpen(true) }}
+                    onFocus={() => setClientOpen(true)}
+                    className="pr-9"
+                  />
+                  <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none transition-transform ${clientOpen ? 'rotate-180' : ''}`} />
+                  {clientOpen && (
+                    <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-900 border border-border rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto animate-in fade-in duration-100">
+                      {customers.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0
+                        ? <p className="px-4 py-3 text-xs text-muted-foreground">No matches — will create new client</p>
+                        : customers.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                          <button key={c.id} type="button"
+                            onClick={() => handleSelectCustomer(c)}
+                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors ${c.id === clientId ? 'text-primary font-semibold bg-primary/5' : 'text-foreground'}`}
+                          >
+                            <div>
+                              <div className="font-semibold">{c.name}</div>
+                              {(c.billing_city || c.contact_name) && (
+                                <div className="text-[11px] text-muted-foreground">
+                                  {[c.contact_name, c.billing_city, c.billing_state].filter(Boolean).join(' • ')}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      }
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Attention To */}
+              <div>
+                <FieldLabel>Attention To (Contact Person)</FieldLabel>
                 <StyledInput
-                  placeholder="e.g. IT Infrastructure Modernization — ABC Pvt Ltd"
-                  value={proposalTitle}
-                  onChange={e => setProposalTitle(e.target.value)}
+                  placeholder="e.g. Mr. Rajesh Kumar, IT Head"
+                  value={contactName}
+                  onChange={e => setContactName(e.target.value)}
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Client */}
-                <div>
-                  <FieldLabel required>Client (Account Name)</FieldLabel>
-                  <div className="relative" ref={clientRef}>
-                    <StyledInput
-                      placeholder="Select or type client name..."
-                      value={clientSearch}
-                      onChange={e => { setClientSearch(e.target.value); setClientId(''); setClientOpen(true) }}
-                      onFocus={() => setClientOpen(true)}
-                      className="pr-9"
-                    />
-                    <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none transition-transform ${clientOpen ? 'rotate-180' : ''}`} />
-                    {clientOpen && (
-                      <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-900 border border-border rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto animate-in fade-in duration-100">
-                        {customers.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0
-                          ? <p className="px-4 py-3 text-xs text-muted-foreground">No matches — will create new client</p>
-                          : customers.filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
-                            <button key={c.id} type="button"
-                              onClick={() => handleSelectCustomer(c)}
-                              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors ${c.id === clientId ? 'text-primary font-semibold bg-primary/5' : 'text-foreground'}`}
-                            >
-                              <div>
-                                <div className="font-semibold">{c.name}</div>
-                                {(c.billing_city || c.contact_name) && (
-                                  <div className="text-[11px] text-muted-foreground">
-                                    {[c.contact_name, c.billing_city, c.billing_state].filter(Boolean).join(' • ')}
-                                  </div>
-                                )}
-                              </div>
-                            </button>
-                          ))
-                        }
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Attention To */}
-                <div>
-                  <FieldLabel>Attention To (Contact Person)</FieldLabel>
-                  <StyledInput
-                    placeholder="e.g. Mr. Rajesh Kumar, IT Head"
-                    value={contactName}
-                    onChange={e => setContactName(e.target.value)}
-                  />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Currency */}
+              <div>
+                <FieldLabel required>Currency</FieldLabel>
+                <div className="relative">
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full h-11 px-3 text-sm border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer appearance-none pr-10"
+                  >
+                    {CURRENCIES.map((c) => (
+                      <option key={c} value={c} className="bg-white dark:bg-slate-900 text-foreground font-medium py-1">
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Currency */}
-                <div>
-                  <FieldLabel required>Currency</FieldLabel>
-                  <div className="relative">
-                    <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full h-11 px-3 text-sm border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer appearance-none pr-10"
-                    >
-                      {CURRENCIES.map((c) => (
-                        <option key={c} value={c} className="bg-white dark:bg-slate-900 text-foreground font-medium py-1">
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              {/* Validity */}
+              <div>
+                <FieldLabel required>Validity Period (days)</FieldLabel>
+                <StyledInput type="number" min={1} value={validityDays}
+                  onChange={e => setValidityDays(Number(e.target.value))} />
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ── 2. Address Information (Brought before line items) ── */}
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/60 rounded-[24px] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden">
+          <button type="button" onClick={() => setAddressExpanded(e => !e)}
+            className="w-full flex items-center justify-between px-6 py-4.5 bg-gradient-to-r from-slate-50/70 to-white/30 dark:from-slate-800/40 dark:to-slate-900/10 border-b border-slate-100 dark:border-slate-800/50 cursor-pointer border-0">
+            <div className="flex items-center gap-3.5">
+              <div className="h-10 w-10 rounded-2xl bg-teal-600 flex items-center justify-center shadow-md shadow-teal-500/10">
+                <Building2 className="h-4.5 w-4.5 text-white" />
+              </div>
+              <div className="text-left">
+                <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100 block tracking-tight">Address Information</span>
+                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mt-0.5 block uppercase tracking-wider">Billing &amp; Shipping addresses</span>
+              </div>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${addressExpanded ? 'rotate-180' : ''}`} />
+          </button>
+
+          {addressExpanded && (
+            <div className="p-5 space-y-4 animate-in slide-in-from-top-1 duration-150">
+              <div className="flex justify-end">
+                <button type="button"
+                  onClick={() => { setShippingStreet(billingStreet); setShippingCity(billingCity); setShippingState(billingState); setShippingCode(billingCode); setShippingCountry(billingCountry); toast.success('Billing address copied to shipping') }}
+                  className="text-xs font-semibold text-primary hover:underline cursor-pointer border-0 bg-transparent">
+                  Copy Billing → Shipping
+                </button>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Billing Address</h4>
+                  <div><FieldLabel>Street</FieldLabel><StyledInput placeholder="Street / Area" value={billingStreet} onChange={e => setBillingStreet(e.target.value)} /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FieldLabel>City</FieldLabel><StyledInput placeholder="City" value={billingCity} onChange={e => setBillingCity(e.target.value)} /></div>
+                    <div><FieldLabel>State</FieldLabel><StyledInput placeholder="State" value={billingState} onChange={e => setBillingState(e.target.value)} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FieldLabel>ZIP / PIN</FieldLabel><StyledInput placeholder="560001" value={billingCode} onChange={e => setBillingCode(e.target.value)} /></div>
+                    <div><FieldLabel>Country</FieldLabel><StyledInput placeholder="India" value={billingCountry} onChange={e => setBillingCountry(e.target.value)} /></div>
                   </div>
                 </div>
-
-                {/* Validity */}
-                <div>
-                  <FieldLabel required>Validity Period (days)</FieldLabel>
-                  <StyledInput type="number" min={1} value={validityDays}
-                    onChange={e => setValidityDays(Number(e.target.value))} />
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Shipping Address</h4>
+                  <div><FieldLabel>Street</FieldLabel><StyledInput placeholder="Street / Area" value={shippingStreet} onChange={e => setShippingStreet(e.target.value)} /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FieldLabel>City</FieldLabel><StyledInput placeholder="City" value={shippingCity} onChange={e => setShippingCity(e.target.value)} /></div>
+                    <div><FieldLabel>State</FieldLabel><StyledInput placeholder="State" value={shippingState} onChange={e => setShippingState(e.target.value)} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><FieldLabel>ZIP / PIN</FieldLabel><StyledInput placeholder="560001" value={shippingCode} onChange={e => setShippingCode(e.target.value)} /></div>
+                    <div><FieldLabel>Country</FieldLabel><StyledInput placeholder="India" value={shippingCountry} onChange={e => setShippingCountry(e.target.value)} /></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </SectionCard>
+          )}
+        </div>
 
-          {/* ── 2. Address Information (Brought before line items) ── */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/60 rounded-[24px] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-6px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden">
-            <button type="button" onClick={() => setAddressExpanded(e => !e)}
-              className="w-full flex items-center justify-between px-6 py-4.5 bg-gradient-to-r from-slate-50/70 to-white/30 dark:from-slate-800/40 dark:to-slate-900/10 border-b border-slate-100 dark:border-slate-800/50 cursor-pointer border-0">
-              <div className="flex items-center gap-3.5">
-                <div className="h-10 w-10 rounded-2xl bg-teal-600 flex items-center justify-center shadow-md shadow-teal-500/10">
-                  <Building2 className="h-4.5 w-4.5 text-white" />
-                </div>
-                <div className="text-left">
-                  <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100 block tracking-tight">Address Information</span>
-                  <span className="text-[10px] font-medium text-slate-400 dark:text-slate-400 mt-0.5 block uppercase tracking-wider">Billing &amp; Shipping addresses</span>
-                </div>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${addressExpanded ? 'rotate-180' : ''}`} />
+        {/* ── 3. Line Items ── */}
+        <SectionCard
+          iconBg="bg-blue-600"
+          icon={<ClipboardList className="h-4.5 w-4.5 text-white" />}
+          title="Line Items"
+          subtitle="Products and services being quoted"
+          headerRight={
+            <button type="button"
+              onClick={() => setLineItems(prev => [...prev, newLineItem()])}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-primary text-white text-xs font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer border-0"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Item
             </button>
-
-            {addressExpanded && (
-              <div className="p-5 space-y-4 animate-in slide-in-from-top-1 duration-150">
-                <div className="flex justify-end">
-                  <button type="button"
-                    onClick={() => { setShippingStreet(billingStreet); setShippingCity(billingCity); setShippingState(billingState); setShippingCode(billingCode); setShippingCountry(billingCountry); toast.success('Billing address copied to shipping') }}
-                    className="text-xs font-semibold text-primary hover:underline cursor-pointer border-0 bg-transparent">
-                    Copy Billing → Shipping
-                  </button>
+          }
+        >
+          <div className="space-y-4">
+            {lineItems.map((li, idx) => (
+              <div key={li.id} className="relative border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm hover:border-primary/30 hover:shadow-md transition-all">
+                {/* Item header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 rounded-t-xl">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Item {idx + 1}</span>
+                  {lineItems.length > 1 && (
+                    <button type="button" onClick={() => removeItem(li.id)}
+                      className="h-6 w-6 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer border-0">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Billing Address</h4>
-                    <div><FieldLabel>Street</FieldLabel><StyledInput placeholder="Street / Area" value={billingStreet} onChange={e => setBillingStreet(e.target.value)} /></div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><FieldLabel>City</FieldLabel><StyledInput placeholder="City" value={billingCity} onChange={e => setBillingCity(e.target.value)} /></div>
-                      <div><FieldLabel>State</FieldLabel><StyledInput placeholder="State" value={billingState} onChange={e => setBillingState(e.target.value)} /></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><FieldLabel>ZIP / PIN</FieldLabel><StyledInput placeholder="560001" value={billingCode} onChange={e => setBillingCode(e.target.value)} /></div>
-                      <div><FieldLabel>Country</FieldLabel><StyledInput placeholder="India" value={billingCountry} onChange={e => setBillingCountry(e.target.value)} /></div>
-                    </div>
+
+                <div className="p-4 space-y-3">
+                  {/* Description */}
+                  <div>
+                    <FieldLabel required>Description of Goods / Services</FieldLabel>
+                    <StyledTextarea rows={3}
+                      placeholder="Enter full product name and specifications (e.g. ArctiCore Forge Server — Dual AMD EPYC 9354 2.9GHz, 256GB DDR5 RAM, 4×3.84TB NVMe SSD)"
+                      value={li.description}
+                      onChange={e => updateItem(li.id, 'description', e.target.value)}
+                    />
                   </div>
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Shipping Address</h4>
-                    <div><FieldLabel>Street</FieldLabel><StyledInput placeholder="Street / Area" value={shippingStreet} onChange={e => setShippingStreet(e.target.value)} /></div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><FieldLabel>City</FieldLabel><StyledInput placeholder="City" value={shippingCity} onChange={e => setShippingCity(e.target.value)} /></div>
-                      <div><FieldLabel>State</FieldLabel><StyledInput placeholder="State" value={shippingState} onChange={e => setShippingState(e.target.value)} /></div>
+
+                  {/* HSN / Qty / Cost / Price / Subtotal */}
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-12">
+                    <div className="md:col-span-2 flex flex-col justify-end">
+                      <FieldLabel>HSN / SAC Code</FieldLabel>
+                      <StyledInput placeholder="8471" value={li.hsnSac} maxLength={10}
+                        onChange={e => updateItem(li.id, 'hsnSac', e.target.value)}
+                        className="font-mono text-center" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><FieldLabel>ZIP / PIN</FieldLabel><StyledInput placeholder="560001" value={shippingCode} onChange={e => setShippingCode(e.target.value)} /></div>
-                      <div><FieldLabel>Country</FieldLabel><StyledInput placeholder="India" value={shippingCountry} onChange={e => setShippingCountry(e.target.value)} /></div>
+                    <div className="md:col-span-2 flex flex-col justify-end">
+                      <FieldLabel required>Qty</FieldLabel>
+                      <StyledInput type="number" min={1} value={li.quantity}
+                        onChange={e => updateItem(li.id, 'quantity', Number(e.target.value))}
+                        className="text-center font-mono" />
+                    </div>
+                    <div className="md:col-span-2 flex flex-col justify-end">
+                      <FieldLabel required>Transfer Price</FieldLabel>
+                      <StyledInput type="number" min={0} step={0.01} placeholder="0.00" value={li.unitCost}
+                        onChange={e => updateItem(li.id, 'unitCost', Number(e.target.value))}
+                        className="font-mono" />
+                    </div>
+                    <div className="md:col-span-3 flex flex-col justify-end">
+                      <FieldLabel required>Unit Price</FieldLabel>
+                      <StyledInput type="number" min={0} step={0.01} value={li.unitPrice}
+                        onChange={e => updateItem(li.id, 'unitPrice', Number(e.target.value))}
+                        className="font-mono" />
+                    </div>
+                    <div className="col-span-1 sm:col-span-2 md:col-span-3 flex flex-col justify-end">
+                      <FieldLabel>Subtotal</FieldLabel>
+                      <div className="h-11 flex items-center justify-end px-3 rounded-xl border border-primary/30 bg-gradient-to-r from-primary/8 to-primary/5 font-bold font-mono text-primary text-sm overflow-hidden select-all truncate whitespace-nowrap" title={fmt(li.quantity * li.unitPrice, currency)}>
+                        {fmt(li.quantity * li.unitPrice, currency)}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            )}
+            ))}
+          </div>
+        </SectionCard>
+
+        {/* ── 4. Pricing & Taxes (Zoho CRM-Style Calculations Block) ── */}
+        <SectionCard
+          iconBg="bg-emerald-600"
+          icon={<DollarSign className="h-4.5 w-4.5 text-white" />}
+          title="Pricing &amp; Taxes"
+          subtitle="Configure discount, taxes, shipping and view summary"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
+            {/* Left Column: Form Controls */}
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Discount */}
+                <div>
+                  <FieldLabel>Discount (%) <span className="normal-case font-normal text-slate-400 font-medium">(negative = surcharge)</span></FieldLabel>
+                  <StyledInput type="number" step={0.1} value={discount} onChange={e => setDiscount(Number(e.target.value))} />
+                </div>
+                {/* Shipping */}
+                <div>
+                  <FieldLabel>Shipping Charges</FieldLabel>
+                  <StyledInput type="number" min={0} step={1} value={shipping} onChange={e => setShipping(Number(e.target.value))} />
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 dark:border-slate-800/60 my-2" />
+
+              {/* Quick Tax Preset */}
+              <div className="space-y-1.5">
+                <FieldLabel>Quick Apply Tax Rate</FieldLabel>
+                <div className="relative" ref={presetRef}>
+                  <button type="button" onClick={() => setPresetOpen(o => !o)}
+                    className="w-full h-11 px-3.5 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-between text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-semibold">
+                    <span className="truncate">{TAX_PRESETS[selectedPreset].label}</span>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 ml-1 transition-transform ${presetOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {presetOpen && (
+                    <div className="absolute z-50 mt-1.5 w-full bg-white dark:bg-slate-900 border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-100">
+                      {TAX_PRESETS.map((p, i) => (
+                        <button key={i} type="button" onClick={() => applyPreset(i)}
+                          className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors ${i === selectedPreset ? 'text-primary font-semibold bg-primary/5' : 'text-foreground'}`}>
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Manual Taxes */}
+              <div className="space-y-2">
+                <FieldLabel>Manual Tax Overrides (CGST, SGST, IGST)</FieldLabel>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">CGST (%)</label>
+                    <StyledInput type="number" min={0} max={100} step={0.5} value={cgst} onChange={e => setCgst(Number(e.target.value))} className="h-10 text-xs px-2.5 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">SGST (%)</label>
+                    <StyledInput type="number" min={0} max={100} step={0.5} value={sgst} onChange={e => setSgst(Number(e.target.value))} className="h-10 text-xs px-2.5 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">IGST (%)</label>
+                    <StyledInput type="number" min={0} max={100} step={0.5} value={igst} onChange={e => setIgst(Number(e.target.value))} className="h-10 text-xs px-2.5 font-mono" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Zoho-Style Calculations Summary */}
+            <div className="bg-slate-50/50 dark:bg-slate-900/50 p-5 rounded-[20px] border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between space-y-3.5">
+              <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block border-b border-slate-100 dark:border-slate-800 pb-2">Calculation Summary</span>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500 font-medium">Sub Total</span>
+                  <span className="font-semibold font-mono text-slate-700 dark:text-slate-300">{fmt(subtotal, currency)}</span>
+                </div>
+
+                {discount !== 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-red-500 font-medium">Discount ({discount}%)</span>
+                    <span className="font-semibold font-mono text-red-500">−{fmt(discountAmt, currency)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center text-sm border-t border-slate-200/40 dark:border-slate-800/40 pt-2">
+                  <span className="text-slate-800 dark:text-slate-200 font-bold">Total</span>
+                  <span className="font-bold font-mono text-slate-800 dark:text-slate-200">{fmt(subtotal - discountAmt, currency)}</span>
+                </div>
+
+                {cgst > 0 && (
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span>CGST ({cgst}%)</span>
+                    <span className="font-mono">{fmt(cgstAmt, currency)}</span>
+                  </div>
+                )}
+
+                {sgst > 0 && (
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span>SGST ({sgst}%)</span>
+                    <span className="font-mono">{fmt(sgstAmt, currency)}</span>
+                  </div>
+                )}
+
+                {igst > 0 && (
+                  <div className="flex justify-between items-center text-xs text-slate-500">
+                    <span>IGST ({igst}%)</span>
+                    <span className="font-mono">{fmt(igstAmt, currency)}</span>
+                  </div>
+                )}
+
+                {shipping > 0 && (
+                  <div className="flex justify-between items-center text-sm text-slate-500 border-t border-slate-200/40 dark:border-slate-800/40 pt-2">
+                    <span>Shipping Charges</span>
+                    <span className="font-semibold font-mono text-slate-700 dark:text-slate-300">{fmt(shipping, currency)}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl p-3.5 flex justify-between items-center shadow-md shadow-emerald-500/10">
+                <span className="text-xs font-black uppercase tracking-wider">Grand Total</span>
+                <span className="text-base font-black font-mono">{fmt(total, currency)}</span>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ── 5. Additional Information ── */}
+        <SectionCard
+          iconBg="bg-violet-600"
+          icon={<MessageSquare className="h-4.5 w-4.5 text-white" />}
+          title="Additional Information"
+          subtitle="Notes and terms"
+        >
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+              <FieldLabel>
+                <span className="flex items-center gap-1.5 text-blue-800 dark:text-blue-300"><MessageSquare className="h-3.5 w-3.5" /> Internal Notes</span>
+              </FieldLabel>
+              <StyledTextarea rows={3} placeholder="Internal notes (not shown on PDF)..." value={notes}
+                onChange={e => setNotes(e.target.value)} className="border-blue-200 dark:border-blue-800 mt-1 bg-white dark:bg-slate-900" />
+            </div>
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40">
+              <FieldLabel>
+                <span className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300"><FileCheck2 className="h-3.5 w-3.5" /> Terms &amp; Conditions</span>
+              </FieldLabel>
+              <StyledTextarea rows={5} placeholder="Payment terms, delivery, warranty..." value={terms}
+                onChange={e => setTerms(e.target.value)} className="border-amber-200 dark:border-amber-800 mt-1 bg-white dark:bg-slate-900" />
+            </div>
+            <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40">
+              <FieldLabel>
+                <span className="flex items-center gap-1.5 text-indigo-800 dark:text-indigo-300"><FileText className="h-3.5 w-3.5" /> Declaration</span>
+              </FieldLabel>
+              <StyledTextarea rows={3} placeholder="We declare that this quotation shows..." value={declaration}
+                onChange={e => setDeclaration(e.target.value)} className="border-indigo-200 dark:border-indigo-800 mt-1 bg-white dark:bg-slate-900" />
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ── 5. Advanced Sections ── */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/60 dark:to-slate-900 border-b border-slate-100 dark:border-slate-800">
+            <div className="h-9 w-9 rounded-xl bg-slate-700 dark:bg-slate-600 flex items-center justify-center shadow-sm">
+              <Settings2 className="h-4.5 w-4.5 text-white" />
+            </div>
+            <div>
+              <span className="font-bold text-sm text-slate-800 dark:text-slate-100 block">Advanced Sections</span>
+              <span className="text-[11px] text-slate-500">Technical BOM (auto-generated from above), SLA &amp; Timeline</span>
+            </div>
           </div>
 
-          {/* ── 3. Line Items ── */}
-          <SectionCard
-            iconBg="bg-blue-600"
-            icon={<ClipboardList className="h-4.5 w-4.5 text-white" />}
-            title="Line Items"
-            subtitle="Products and services being quoted"
-            headerRight={
-              <button type="button"
-                onClick={() => setLineItems(prev => [...prev, newLineItem()])}
-                className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-primary text-white text-xs font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer border-0"
-              >
-                <Plus className="h-3.5 w-3.5" /> Add Item
+          {/* Tabs */}
+          <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 px-4 pt-3 gap-1">
+            {(['bom', 'sla', 'timeline'] as const).map(tab => (
+              <button key={tab} type="button" onClick={() => setAdvancedTab(tab)}
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-t-lg transition-all ${advancedTab === tab ? 'bg-white dark:bg-slate-900 text-primary border border-b-0 border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                {tab === 'bom' && <Layers className="h-3.5 w-3.5" />}
+                {tab === 'sla' && <ClipboardList className="h-3.5 w-3.5" />}
+                {tab === 'timeline' && <Calendar className="h-3.5 w-3.5" />}
+                {tab === 'bom' ? 'Bill of Material' : tab === 'sla' ? 'SLA' : 'Timeline'}
               </button>
-            }
-          >
-            <div className="space-y-4">
-              {lineItems.map((li, idx) => (
-                <div key={li.id} className="relative border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm hover:border-primary/30 hover:shadow-md transition-all">
-                  {/* Item header */}
-                  <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 rounded-t-xl">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Item {idx + 1}</span>
-                    {lineItems.length > 1 && (
-                      <button type="button" onClick={() => removeItem(li.id)}
-                        className="h-6 w-6 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer border-0">
-                        <Trash2 className="h-3.5 w-3.5" />
+            ))}
+          </div>
+
+          <div className="p-5">
+            {/* BOM Tab */}
+            {advancedTab === 'bom' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Bill of Materials (Annexure)</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Auto-generated from product components above, or upload/paste manually</p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button type="button" onClick={() => setBomData(prev => [...prev, { section: 'Untitled', module: '', description: '', quantity: 1 }])}
+                      className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold text-indigo-600 cursor-pointer transition-colors border-0">
+                      <Plus className="h-3.5 w-3.5" /> Add Row
+                    </button>
+                    <label className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 cursor-pointer transition-colors">
+                      <Upload className="h-3.5 w-3.5" /> Upload XLSX
+                      <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} className="hidden" />
+                    </label>
+                    <button type="button" onClick={() => setPasteModalOpen(true)}
+                      className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 cursor-pointer transition-colors border-solid">
+                      <Clipboard className="h-3.5 w-3.5" /> Paste from Excel
+                    </button>
+                    {bomData.length > 0 && (
+                      <button type="button" onClick={() => setBomData([])}
+                        className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-red-200 bg-red-50 text-xs font-medium text-red-600 hover:bg-red-100 cursor-pointer transition-colors border-solid">
+                        <Trash2 className="h-3.5 w-3.5" /> Clear Manual BOM
                       </button>
                     )}
                   </div>
-
-                  <div className="p-4 space-y-3">
-                    {/* Description */}
-                    <div>
-                      <FieldLabel required>Description of Goods / Services</FieldLabel>
-                      <StyledTextarea rows={3}
-                        placeholder="Enter full product name and specifications (e.g. ArctiCore Forge Server — Dual AMD EPYC 9354 2.9GHz, 256GB DDR5 RAM, 4×3.84TB NVMe SSD)"
-                        value={li.description}
-                        onChange={e => updateItem(li.id, 'description', e.target.value)}
-                      />
-                    </div>
-
-                    {/* HSN / Qty / Cost / Price / Subtotal */}
-                    <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-12">
-                      <div className="md:col-span-2 flex flex-col justify-end">
-                        <FieldLabel>HSN / SAC Code</FieldLabel>
-                        <StyledInput placeholder="8471" value={li.hsnSac} maxLength={10}
-                          onChange={e => updateItem(li.id, 'hsnSac', e.target.value)}
-                          className="font-mono text-center" />
-                      </div>
-                      <div className="md:col-span-2 flex flex-col justify-end">
-                        <FieldLabel required>Qty</FieldLabel>
-                        <StyledInput type="number" min={1} value={li.quantity}
-                          onChange={e => updateItem(li.id, 'quantity', Number(e.target.value))}
-                          className="text-center font-mono" />
-                      </div>
-                      <div className="md:col-span-2 flex flex-col justify-end">
-                        <FieldLabel required>Transfer Price</FieldLabel>
-                        <StyledInput type="number" min={0} step={0.01} placeholder="0.00" value={li.unitCost}
-                          onChange={e => updateItem(li.id, 'unitCost', Number(e.target.value))}
-                          className="font-mono" />
-                      </div>
-                      <div className="md:col-span-3 flex flex-col justify-end">
-                        <FieldLabel required>Unit Price</FieldLabel>
-                        <StyledInput type="number" min={0} step={0.01} value={li.unitPrice}
-                          onChange={e => updateItem(li.id, 'unitPrice', Number(e.target.value))}
-                          className="font-mono" />
-                      </div>
-                      <div className="col-span-1 sm:col-span-2 md:col-span-3 flex flex-col justify-end">
-                        <FieldLabel>Subtotal</FieldLabel>
-                        <div className="h-11 flex items-center justify-end px-3 rounded-xl border border-primary/30 bg-gradient-to-r from-primary/8 to-primary/5 font-bold font-mono text-primary text-sm overflow-hidden select-all truncate whitespace-nowrap" title={fmt(li.quantity * li.unitPrice, currency)}>
-                          {fmt(li.quantity * li.unitPrice, currency)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
-
-          {/* ── 4. Pricing & Taxes (Zoho CRM-Style Calculations Block) ── */}
-          <SectionCard
-            iconBg="bg-emerald-600"
-            icon={<DollarSign className="h-4.5 w-4.5 text-white" />}
-            title="Pricing &amp; Taxes"
-            subtitle="Configure discount, taxes, shipping and view summary"
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
-              {/* Left Column: Form Controls */}
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Discount */}
-                  <div>
-                    <FieldLabel>Discount (%) <span className="normal-case font-normal text-slate-400 font-medium">(negative = surcharge)</span></FieldLabel>
-                    <StyledInput type="number" step={0.1} value={discount} onChange={e => setDiscount(Number(e.target.value))} />
-                  </div>
-                  {/* Shipping */}
-                  <div>
-                    <FieldLabel>Shipping Charges</FieldLabel>
-                    <StyledInput type="number" min={0} step={1} value={shipping} onChange={e => setShipping(Number(e.target.value))} />
-                  </div>
                 </div>
 
-                <div className="border-t border-slate-100 dark:border-slate-800/60 my-2" />
-
-                {/* Quick Tax Preset */}
-                <div className="space-y-1.5">
-                  <FieldLabel>Quick Apply Tax Rate</FieldLabel>
-                  <div className="relative" ref={presetRef}>
-                    <button type="button" onClick={() => setPresetOpen(o => !o)}
-                      className="w-full h-11 px-3.5 text-sm border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-between text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-semibold">
-                      <span className="truncate">{TAX_PRESETS[selectedPreset].label}</span>
-                      <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 ml-1 transition-transform ${presetOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {presetOpen && (
-                      <div className="absolute z-50 mt-1.5 w-full bg-white dark:bg-slate-900 border border-border rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-100">
-                        {TAX_PRESETS.map((p, i) => (
-                          <button key={i} type="button" onClick={() => applyPreset(i)}
-                            className={`w-full text-left px-4 py-3 text-xs hover:bg-primary/5 transition-colors ${i === selectedPreset ? 'text-primary font-semibold bg-primary/5' : 'text-foreground'}`}>
-                            {p.label}
-                          </button>
+                {/* Auto BOM Preview */}
+                {bomData.length === 0 && (
+                  <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 p-4">
+                    <div className="flex items-start gap-2 mb-3">
+                      <Layers className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Auto-Generated BOM Preview</p>
+                        <p className="text-[11px] text-indigo-600/70 dark:text-indigo-400/70">Based on product components added above. Upload XLSX or add rows manually to override.</p>
+                      </div>
+                    </div>
+                    {lineItems.some(li => (li.sub_items?.length ?? 0) > 0) ? (
+                      <div className="space-y-2">
+                        {lineItems.filter(li => (li.sub_items?.length ?? 0) > 0).map(li => (
+                          <div key={li.id}>
+                            <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1 px-1">{li.description || 'Product'}</p>
+                            {li.sub_items!.map(sub => (
+                              <div key={sub.id} className="flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                                <span className="font-mono text-slate-400 w-20 shrink-0 truncate">{sub.part_number || '—'}</span>
+                                <span className="font-medium w-24 shrink-0 truncate">{sub.brand || '—'}</span>
+                                <span className="flex-1 truncate">{sub.description}</span>
+                                <span className="font-bold tabular-nums w-8 text-right shrink-0">×{sub.quantity * li.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
                         ))}
                       </div>
+                    ) : (
+                      <div className="text-center py-4 text-xs text-slate-500">
+                        <Layers className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                        No components added yet. Add product components under each line item, upload XLSX, or click "+ Add Row" to define custom BOM.
+                      </div>
                     )}
                   </div>
-                </div>
+                )}
 
-                {/* Manual Taxes */}
-                <div className="space-y-2">
-                  <FieldLabel>Manual Tax Overrides (CGST, SGST, IGST)</FieldLabel>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">CGST (%)</label>
-                      <StyledInput type="number" min={0} max={100} step={0.5} value={cgst} onChange={e => setCgst(Number(e.target.value))} className="h-10 text-xs px-2.5 font-mono" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">SGST (%)</label>
-                      <StyledInput type="number" min={0} max={100} step={0.5} value={sgst} onChange={e => setSgst(Number(e.target.value))} className="h-10 text-xs px-2.5 font-mono" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">IGST (%)</label>
-                      <StyledInput type="number" min={0} max={100} step={0.5} value={igst} onChange={e => setIgst(Number(e.target.value))} className="h-10 text-xs px-2.5 font-mono" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Zoho-Style Calculations Summary */}
-              <div className="bg-slate-50/50 dark:bg-slate-900/50 p-5 rounded-[20px] border border-slate-100 dark:border-slate-800/80 flex flex-col justify-between space-y-3.5">
-                <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block border-b border-slate-100 dark:border-slate-800 pb-2">Calculation Summary</span>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">Sub Total</span>
-                    <span className="font-semibold font-mono text-slate-700 dark:text-slate-300">{fmt(subtotal, currency)}</span>
-                  </div>
-
-                  {discount !== 0 && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-red-500 font-medium">Discount ({discount}%)</span>
-                      <span className="font-semibold font-mono text-red-500">−{fmt(discountAmt, currency)}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center text-sm border-t border-slate-200/40 dark:border-slate-800/40 pt-2">
-                    <span className="text-slate-800 dark:text-slate-200 font-bold">Total</span>
-                    <span className="font-bold font-mono text-slate-800 dark:text-slate-200">{fmt(subtotal - discountAmt, currency)}</span>
-                  </div>
-
-                  {cgst > 0 && (
-                    <div className="flex justify-between items-center text-xs text-slate-500">
-                      <span>CGST ({cgst}%)</span>
-                      <span className="font-mono">{fmt(cgstAmt, currency)}</span>
-                    </div>
-                  )}
-
-                  {sgst > 0 && (
-                    <div className="flex justify-between items-center text-xs text-slate-500">
-                      <span>SGST ({sgst}%)</span>
-                      <span className="font-mono">{fmt(sgstAmt, currency)}</span>
-                    </div>
-                  )}
-
-                  {igst > 0 && (
-                    <div className="flex justify-between items-center text-xs text-slate-500">
-                      <span>IGST ({igst}%)</span>
-                      <span className="font-mono">{fmt(igstAmt, currency)}</span>
-                    </div>
-                  )}
-
-                  {shipping > 0 && (
-                    <div className="flex justify-between items-center text-sm text-slate-500 border-t border-slate-200/40 dark:border-slate-800/40 pt-2">
-                      <span>Shipping Charges</span>
-                      <span className="font-semibold font-mono text-slate-700 dark:text-slate-300">{fmt(shipping, currency)}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl p-3.5 flex justify-between items-center shadow-md shadow-emerald-500/10">
-                  <span className="text-xs font-black uppercase tracking-wider">Grand Total</span>
-                  <span className="text-base font-black font-mono">{fmt(total, currency)}</span>
-                </div>
-              </div>
-            </div>
-          </SectionCard>
-
-          {/* ── 5. Additional Information ── */}
-          <SectionCard
-            iconBg="bg-violet-600"
-            icon={<MessageSquare className="h-4.5 w-4.5 text-white" />}
-            title="Additional Information"
-            subtitle="Notes and terms"
-          >
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
-                <FieldLabel>
-                  <span className="flex items-center gap-1.5 text-blue-800 dark:text-blue-300"><MessageSquare className="h-3.5 w-3.5" /> Internal Notes</span>
-                </FieldLabel>
-                <StyledTextarea rows={3} placeholder="Internal notes (not shown on PDF)..." value={notes}
-                  onChange={e => setNotes(e.target.value)} className="border-blue-200 dark:border-blue-800 mt-1 bg-white dark:bg-slate-900" />
-              </div>
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40">
-                <FieldLabel>
-                  <span className="flex items-center gap-1.5 text-amber-800 dark:text-amber-300"><FileCheck2 className="h-3.5 w-3.5" /> Terms &amp; Conditions</span>
-                </FieldLabel>
-                <StyledTextarea rows={5} placeholder="Payment terms, delivery, warranty..." value={terms}
-                  onChange={e => setTerms(e.target.value)} className="border-amber-200 dark:border-amber-800 mt-1 bg-white dark:bg-slate-900" />
-              </div>
-              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/40">
-                <FieldLabel>
-                  <span className="flex items-center gap-1.5 text-indigo-800 dark:text-indigo-300"><FileText className="h-3.5 w-3.5" /> Declaration</span>
-                </FieldLabel>
-                <StyledTextarea rows={3} placeholder="We declare that this quotation shows..." value={declaration}
-                  onChange={e => setDeclaration(e.target.value)} className="border-indigo-200 dark:border-indigo-800 mt-1 bg-white dark:bg-slate-900" />
-              </div>
-            </div>
-          </SectionCard>
-
-          {/* ── 5. Advanced Sections ── */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/60 dark:to-slate-900 border-b border-slate-100 dark:border-slate-800">
-              <div className="h-9 w-9 rounded-xl bg-slate-700 dark:bg-slate-600 flex items-center justify-center shadow-sm">
-                <Settings2 className="h-4.5 w-4.5 text-white" />
-              </div>
-              <div>
-                <span className="font-bold text-sm text-slate-800 dark:text-slate-100 block">Advanced Sections</span>
-                <span className="text-[11px] text-slate-500">Technical BOM (auto-generated from above), SLA &amp; Timeline</span>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 px-4 pt-3 gap-1">
-              {(['bom', 'sla', 'timeline'] as const).map(tab => (
-                <button key={tab} type="button" onClick={() => setAdvancedTab(tab)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-t-lg transition-all ${advancedTab === tab ? 'bg-white dark:bg-slate-900 text-primary border border-b-0 border-slate-200 dark:border-slate-700' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-                  {tab === 'bom' && <Layers className="h-3.5 w-3.5" />}
-                  {tab === 'sla' && <ClipboardList className="h-3.5 w-3.5" />}
-                  {tab === 'timeline' && <Calendar className="h-3.5 w-3.5" />}
-                  {tab === 'bom' ? 'Bill of Material' : tab === 'sla' ? 'SLA' : 'Timeline'}
-                </button>
-              ))}
-            </div>
-
-            <div className="p-5">
-              {/* BOM Tab */}
-              {advancedTab === 'bom' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Bill of Materials (Annexure)</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Auto-generated from product components above, or upload/paste manually</p>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <button type="button" onClick={() => setBomData(prev => [...prev, { section: 'Untitled', module: '', description: '', quantity: 1 }])}
-                        className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-xs font-semibold text-indigo-600 cursor-pointer transition-colors border-0">
-                        <Plus className="h-3.5 w-3.5" /> Add Row
-                      </button>
-                      <label className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 cursor-pointer transition-colors">
-                        <Upload className="h-3.5 w-3.5" /> Upload XLSX
-                        <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} className="hidden" />
-                      </label>
-                      <button type="button" onClick={() => setPasteModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 cursor-pointer transition-colors border-solid">
-                        <Clipboard className="h-3.5 w-3.5" /> Paste from Excel
-                      </button>
-                      {bomData.length > 0 && (
-                        <button type="button" onClick={() => setBomData([])}
-                          className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-red-200 bg-red-50 text-xs font-medium text-red-600 hover:bg-red-100 cursor-pointer transition-colors border-solid">
-                          <Trash2 className="h-3.5 w-3.5" /> Clear Manual BOM
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Auto BOM Preview */}
-                  {bomData.length === 0 && (
-                    <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/50 dark:bg-indigo-950/20 p-4">
-                      <div className="flex items-start gap-2 mb-3">
-                        <Layers className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Auto-Generated BOM Preview</p>
-                          <p className="text-[11px] text-indigo-600/70 dark:text-indigo-400/70">Based on product components added above. Upload XLSX or add rows manually to override.</p>
-                        </div>
-                      </div>
-                      {lineItems.some(li => (li.sub_items?.length ?? 0) > 0) ? (
-                        <div className="space-y-2">
-                          {lineItems.filter(li => (li.sub_items?.length ?? 0) > 0).map(li => (
-                            <div key={li.id}>
-                              <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase mb-1 px-1">{li.description || 'Product'}</p>
-                              {li.sub_items!.map(sub => (
-                                <div key={sub.id} className="flex items-center gap-3 px-3 py-1.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
-                                  <span className="font-mono text-slate-400 w-20 shrink-0 truncate">{sub.part_number || '—'}</span>
-                                  <span className="font-medium w-24 shrink-0 truncate">{sub.brand || '—'}</span>
-                                  <span className="flex-1 truncate">{sub.description}</span>
-                                  <span className="font-bold tabular-nums w-8 text-right shrink-0">×{sub.quantity * li.quantity}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-xs text-slate-500">
-                          <Layers className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                          No components added yet. Add product components under each line item, upload XLSX, or click "+ Add Row" to define custom BOM.
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Manual BOM Table */}
-                  {bomData.length > 0 && (
-                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-                      <table className="w-full text-xs">
-                        <thead className="bg-slate-100 dark:bg-slate-800">
-                          <tr className="text-[10px] font-bold text-slate-500 uppercase">
-                            <th className="px-3 py-2 text-left w-8">#</th>
-                            <th className="px-3 py-2 text-left w-36">Module / Part No</th>
-                            <th className="px-3 py-2 text-left">Technical Description &amp; Specifications</th>
-                            <th className="px-3 py-2 text-center w-20">Qty</th>
-                            <th className="px-3 py-2 w-8"></th>
+                {/* Manual BOM Table */}
+                {bomData.length > 0 && (
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-100 dark:bg-slate-800">
+                        <tr className="text-[10px] font-bold text-slate-500 uppercase">
+                          <th className="px-3 py-2 text-left w-8">#</th>
+                          <th className="px-3 py-2 text-left w-36">Module / Part No</th>
+                          <th className="px-3 py-2 text-left">Technical Description &amp; Specifications</th>
+                          <th className="px-3 py-2 text-center w-20">Qty</th>
+                          <th className="px-3 py-2 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {bomData.map((item, i) => (
+                          <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                            <td className="px-3 py-2 text-slate-400 align-middle">{i + 1}</td>
+                            <td className="px-2 py-1.5">
+                              <input type="text" placeholder="Module" value={item.module || ''}
+                                onChange={e => {
+                                  const val = e.target.value
+                                  setBomData(prev => prev.map((x, j) => j === i ? { ...x, module: val } : x))
+                                }}
+                                className="w-full h-8 px-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20" />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input type="text" placeholder="e.g. Cisco Catalyst 9300 48-Port PoE+" value={item.description || ''}
+                                onChange={e => {
+                                  const val = e.target.value
+                                  setBomData(prev => prev.map((x, j) => j === i ? { ...x, description: val } : x))
+                                }}
+                                className="w-full h-8 px-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20" />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input type="number" min={1} value={item.quantity}
+                                onFocus={(e) => e.target.select()}
+                                onChange={e => {
+                                  const val = Number(e.target.value)
+                                  setBomData(prev => prev.map((x, j) => j === i ? { ...x, quantity: val } : x))
+                                }}
+                                className="w-full h-8 px-2 text-xs text-center border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20" />
+                            </td>
+                            <td className="px-2 py-1.5 align-middle">
+                              <button type="button" onClick={() => setBomData(d => d.filter((_, j) => j !== i))}
+                                className="h-7 w-7 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 border-0 cursor-pointer transition-colors">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                          {bomData.map((item, i) => (
-                            <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                              <td className="px-3 py-2 text-slate-400 align-middle">{i + 1}</td>
-                              <td className="px-2 py-1.5">
-                                <input type="text" placeholder="Module" value={item.module || ''}
-                                  onChange={e => {
-                                    const val = e.target.value
-                                    setBomData(prev => prev.map((x, j) => j === i ? { ...x, module: val } : x))
-                                  }}
-                                  className="w-full h-8 px-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20" />
-                              </td>
-                              <td className="px-2 py-1.5">
-                                <input type="text" placeholder="e.g. Cisco Catalyst 9300 48-Port PoE+" value={item.description || ''}
-                                  onChange={e => {
-                                    const val = e.target.value
-                                    setBomData(prev => prev.map((x, j) => j === i ? { ...x, description: val } : x))
-                                  }}
-                                  className="w-full h-8 px-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20" />
-                              </td>
-                              <td className="px-2 py-1.5">
-                                <input type="number" min={1} value={item.quantity}
-                                  onFocus={(e) => e.target.select()}
-                                  onChange={e => {
-                                    const val = Number(e.target.value)
-                                    setBomData(prev => prev.map((x, j) => j === i ? { ...x, quantity: val } : x))
-                                  }}
-                                  className="w-full h-8 px-2 text-xs text-center border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 font-mono focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20" />
-                              </td>
-                              <td className="px-2 py-1.5 align-middle">
-                                <button type="button" onClick={() => setBomData(d => d.filter((_, j) => j !== i))}
-                                  className="h-7 w-7 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 border-0 cursor-pointer transition-colors">
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
-              {/* SLA Tab */}
-              {advancedTab === 'sla' && (
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5"><ClipboardList className="h-4 w-4 text-primary" /> SLA Terms &amp; Configuration</p>
-                  <StyledTextarea rows={6} placeholder="Describe Service Level Agreement terms..." value={slaData} onChange={e => setSlaData(e.target.value)} />
-                  <p className="text-[11px] text-slate-500">This details the support response levels, replacement details, and general coverage parameters.</p>
-                </div>
-              )}
+            {/* SLA Tab */}
+            {advancedTab === 'sla' && (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5"><ClipboardList className="h-4 w-4 text-primary" /> SLA Terms &amp; Configuration</p>
+                <StyledTextarea rows={6} placeholder="Describe Service Level Agreement terms..." value={slaData} onChange={e => setSlaData(e.target.value)} />
+                <p className="text-[11px] text-slate-500">This details the support response levels, replacement details, and general coverage parameters.</p>
+              </div>
+            )}
 
-              {/* Timeline Tab */}
-              {advancedTab === 'timeline' && (
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5"><Calendar className="h-4 w-4 text-primary" /> Project Timeline / Delivery Phases</p>
-                  <StyledTextarea rows={6} placeholder="Enter project milestones or delivery schedules..." value={timelineData} onChange={e => setTimelineData(e.target.value)} />
-                  <p className="text-[11px] text-slate-500">Define milestones such as Delivery, Installation, Testing, and Handover times.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-      {/* ── Floating Bottom Action Bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-slate-950/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 py-4.5 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] lg:left-64 transition-all animate-in slide-in-from-bottom duration-300">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Subtotal</span>
-              <span className="text-xs font-semibold font-mono text-slate-600 dark:text-slate-400 mt-0.5">{fmt(subtotal, currency)}</span>
-            </div>
-            {discount !== 0 && (
-              <>
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-extrabold text-red-500 uppercase tracking-widest">Discount ({discount}%)</span>
-                  <span className="text-xs font-semibold font-mono text-red-500 mt-0.5">−{fmt(discountAmt, currency)}</span>
-                </div>
-              </>
+            {/* Timeline Tab */}
+            {advancedTab === 'timeline' && (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-1.5"><Calendar className="h-4 w-4 text-primary" /> Project Timeline / Delivery Phases</p>
+                <StyledTextarea rows={6} placeholder="Enter project milestones or delivery schedules..." value={timelineData} onChange={e => setTimelineData(e.target.value)} />
+                <p className="text-[11px] text-slate-500">Define milestones such as Delivery, Installation, Testing, and Handover times.</p>
+              </div>
             )}
-            {shipping > 0 && (
-              <>
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Shipping</span>
-                  <span className="text-xs font-semibold font-mono text-slate-600 dark:text-slate-400 mt-0.5">{fmt(shipping, currency)}</span>
-                </div>
-              </>
-            )}
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Total</span>
-              <span className="text-xs font-semibold font-mono text-blue-600 dark:text-blue-400 mt-0.5">{fmt(subtotal - discountAmt, currency)}</span>
-            </div>
-            {cgst > 0 && (
-              <>
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">CGST</span>
-                  <span className="text-xs font-mono text-slate-500 mt-0.5">{fmt(cgstAmt, currency)}</span>
-                </div>
-              </>
-            )}
-            {sgst > 0 && (
-              <>
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">SGST</span>
-                  <span className="text-xs font-mono text-slate-500 mt-0.5">{fmt(sgstAmt, currency)}</span>
-                </div>
-              </>
-            )}
-            {igst > 0 && (
-              <>
-                <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">IGST</span>
-                  <span className="text-xs font-mono text-slate-500 mt-0.5">{fmt(igstAmt, currency)}</span>
-                </div>
-              </>
-            )}
-            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest font-black">Grand Total</span>
-              <span className="text-base font-black font-mono text-slate-900 dark:text-white mt-0.5">{fmt(total, currency)}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3.5 ml-auto">
-            {!isEditMode && (
-              <span className="hidden lg:inline text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                Saved as draft
-              </span>
-            )}
-            <button type="button" onClick={handleCreate} disabled={saving}
-              className="h-11 px-6 flex items-center justify-center gap-2 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-indigo-600 to-primary shadow-lg shadow-primary/20 hover:shadow-primary/45 hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer border-0">
-              <Rocket className="h-3.5 w-3.5" />
-              {saving ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Quote')}
-            </button>
           </div>
         </div>
-      </div>
 
-    </motion.div>
+        {/* ── Floating Bottom Action Bar ── */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/85 dark:bg-slate-950/85 backdrop-blur-lg border-t border-slate-200/60 dark:border-slate-800/60 py-4.5 px-6 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] lg:left-64 transition-all animate-in slide-in-from-bottom duration-300">
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Subtotal</span>
+                <span className="text-xs font-semibold font-mono text-slate-600 dark:text-slate-400 mt-0.5">{fmt(subtotal, currency)}</span>
+              </div>
+              {discount !== 0 && (
+                <>
+                  <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-extrabold text-red-500 uppercase tracking-widest">Discount ({discount}%)</span>
+                    <span className="text-xs font-semibold font-mono text-red-500 mt-0.5">−{fmt(discountAmt, currency)}</span>
+                  </div>
+                </>
+              )}
+              {shipping > 0 && (
+                <>
+                  <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Shipping</span>
+                    <span className="text-xs font-semibold font-mono text-slate-600 dark:text-slate-400 mt-0.5">{fmt(shipping, currency)}</span>
+                  </div>
+                </>
+              )}
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Total</span>
+                <span className="text-xs font-semibold font-mono text-blue-600 dark:text-blue-400 mt-0.5">{fmt(subtotal - discountAmt, currency)}</span>
+              </div>
+              {cgst > 0 && (
+                <>
+                  <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">CGST</span>
+                    <span className="text-xs font-mono text-slate-500 mt-0.5">{fmt(cgstAmt, currency)}</span>
+                  </div>
+                </>
+              )}
+              {sgst > 0 && (
+                <>
+                  <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">SGST</span>
+                    <span className="text-xs font-mono text-slate-500 mt-0.5">{fmt(sgstAmt, currency)}</span>
+                  </div>
+                </>
+              )}
+              {igst > 0 && (
+                <>
+                  <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">IGST</span>
+                    <span className="text-xs font-mono text-slate-500 mt-0.5">{fmt(igstAmt, currency)}</span>
+                  </div>
+                </>
+              )}
+              <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest font-black">Grand Total</span>
+                <span className="text-base font-black font-mono text-slate-900 dark:text-white mt-0.5">{fmt(total, currency)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3.5 ml-auto">
+              {!isEditMode && (
+                <span className="hidden lg:inline text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  Saved as draft
+                </span>
+              )}
+              <button type="button" onClick={handleCreate} disabled={saving}
+                className="h-11 px-6 flex items-center justify-center gap-2 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-indigo-600 to-primary shadow-lg shadow-primary/20 hover:shadow-primary/45 hover:scale-[1.01] transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer border-0">
+                <Rocket className="h-3.5 w-3.5" />
+                {saving ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Quote')}
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </motion.div>
 
       {/* ── Paste Modal ── */}
       {pasteModalOpen && (

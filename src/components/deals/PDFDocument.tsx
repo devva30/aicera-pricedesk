@@ -493,8 +493,8 @@ export function QuotePDFDocument({ deal, settings: propSettings }: { deal: Deal;
     if (settings.pdf_developer_styles) {
       devStyles = JSON.parse(settings.pdf_developer_styles)
     }
-  } catch {}
-  
+  } catch { }
+
   // Extract custom configuration
   const themeColor = settings.pdf_theme_color || '#1e3a5f'
   const accentColor = settings.pdf_accent_color || '#f7f9fc'
@@ -536,7 +536,7 @@ export function QuotePDFDocument({ deal, settings: propSettings }: { deal: Deal;
   } else if (typeof deal.bom_data === 'string' && (deal.bom_data as string).trim()) {
     try {
       rawBomData = JSON.parse(deal.bom_data as string)
-    } catch {}
+    } catch { }
   }
 
   // NOTE: BOM inheritance from linked quotes is handled by deal-detail-page.tsx before this
@@ -950,34 +950,34 @@ export function QuotePDFDocument({ deal, settings: propSettings }: { deal: Deal;
                 <View style={[styles.bomHeaderCell, styles.bomColQty]}><Text>Qty</Text></View>
               </View>
 
-            {/* Rows grouped by section & parent product */}
-            {bomGrouped.map((section, sectionIdx) => (
-              <React.Fragment key={sectionIdx}>
-                {/* Section header row */}
-                <View style={styles.bomSectionRow} wrap={false}>
-                  <Text style={styles.bomSectionText}>{section.sectionName}</Text>
-                </View>
-                {section.parentProducts.map((parent, parentIdx) => (
-                  <React.Fragment key={parentIdx}>
-                    {/* Parent product row */}
-                    {parent.productName ? (
-                      <View style={styles.bomParentRow} wrap={false}>
-                        <Text style={styles.bomParentText}>{parent.productName}</Text>
-                      </View>
-                    ) : null}
-                    {/* Components under it */}
-                    {parent.items.map((item, itemIdx) => (
-                      <View key={itemIdx} style={itemIdx % 2 === 0 ? styles.tableBodyRow : styles.tableBodyRowAlt} wrap={false}>
-                        <View style={[styles.bomCell, styles.bomColModule]}><Text style={{ fontFamily: 'Helvetica-Bold' }}>{item.brand || item.module || '—'}</Text></View>
-                        <View style={[styles.bomCell, styles.bomColDesc]}><Text>{item.description}</Text></View>
-                        <View style={[styles.bomCell, styles.bomColQty, { borderRightWidth: 0 }]}><Text style={{ fontFamily: 'Helvetica-Bold', textAlign: 'center' }}>{item.quantity}</Text></View>
-                      </View>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </React.Fragment>
-            ))}
-          </View>
+              {/* Rows grouped by section & parent product */}
+              {bomGrouped.map((section, sectionIdx) => (
+                <React.Fragment key={sectionIdx}>
+                  {/* Section header row */}
+                  <View style={styles.bomSectionRow} wrap={false}>
+                    <Text style={styles.bomSectionText}>{section.sectionName}</Text>
+                  </View>
+                  {section.parentProducts.map((parent, parentIdx) => (
+                    <React.Fragment key={parentIdx}>
+                      {/* Parent product row */}
+                      {parent.productName ? (
+                        <View style={styles.bomParentRow} wrap={false}>
+                          <Text style={styles.bomParentText}>{parent.productName}</Text>
+                        </View>
+                      ) : null}
+                      {/* Components under it */}
+                      {parent.items.map((item, itemIdx) => (
+                        <View key={itemIdx} style={itemIdx % 2 === 0 ? styles.tableBodyRow : styles.tableBodyRowAlt} wrap={false}>
+                          <View style={[styles.bomCell, styles.bomColModule]}><Text style={{ fontFamily: 'Helvetica-Bold' }}>{item.brand || item.module || '—'}</Text></View>
+                          <View style={[styles.bomCell, styles.bomColDesc]}><Text>{item.description}</Text></View>
+                          <View style={[styles.bomCell, styles.bomColQty, { borderRightWidth: 0 }]}><Text style={{ fontFamily: 'Helvetica-Bold', textAlign: 'center' }}>{item.quantity}</Text></View>
+                        </View>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </React.Fragment>
+              ))}
+            </View>
           )}
 
           {/* SLA & Timeline if available */}

@@ -1,11 +1,11 @@
-Module,Description,Qty
-CPU,AMD EPYC 9354 Processor 32 Cores 2.9GHz,2
-Motherboard,Dual Socket SP5 Server Motherboard,1
-RAM,32GB DDR5-4800 ECC Registered RDIMM,16
-GPU,NVIDIA H200 Tensor Core GPU 141GB,2
-NIC,Dual-port 100GbE Ethernet Adapter,2
-Storage,3.84TB Enterprise NVMe U.2 SSD,3
-Power Supply,3000W Titanium Redundant PSU,4
-OS Drive,960GB SATA SSD Enterprise,1
-Chassis,4U Rackmount Server Chassis,1
-Warranty,3-Year Next Business Day Onsite Support,1
+Module,Module
+CPU,CPU
+Motherboard,Motherboard
+RAM,RAM
+GPU,GPU
+NIC,NIC
+Storage,Storage
+Power Supply,Power Supply
+OS Drive,OS Drive
+Chassis,Chassis
+Warranty,Warranty

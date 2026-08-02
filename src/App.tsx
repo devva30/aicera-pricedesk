@@ -297,7 +297,7 @@ export default function App() {
         <HashRouter>
           <AppRoutes />
           <OfflineIndicator />
-          <Toaster richColors position="top-right" duration={1500} />
+          <Toaster richColors position="top-right" duration={5000} />
         </HashRouter>
       </Provider>
     </ErrorBoundary>
