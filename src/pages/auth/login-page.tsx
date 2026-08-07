@@ -18,14 +18,11 @@ import {
   ClipboardCheck,
   ClipboardList,
   Settings,
-  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/stores/auth-store'
-import { DEMO_USERS } from '@/lib/mock-data'
-import type { UserRole } from '@/types'
 
 const schema = z.object({
   email: z.string().email('Please enter a valid work email'),
@@ -44,30 +41,11 @@ const ROLES = [
   { value: 'admin',      label: 'Admin',            icon: Settings    },
 ]
 
-const DEMO_ROLES: {
-  role: UserRole
-  key: string
-  label: string
-  name: string
-  icon: React.ComponentType<{ className?: string }>
-  color: string
-  bg: string
-}[] = [
-  { role: 'sales_rep',  key: 'sales',     label: 'Sales Rep',         name: 'Arjun Mehta',  icon: TrendingUp,    color: 'text-primary',     bg: 'bg-primary/10 border-primary/20 hover:bg-primary/20'         },
-  { role: 'sales_rep',  key: 'sales_2',   label: 'Sales Rep',         name: 'Kavita Reddy', icon: TrendingUp,    color: 'text-indigo-600',  bg: 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/20' },
-  { role: 'technical',  key: 'technical', label: 'Tech Review',       name: 'Vikram Patel', icon: Wrench,        color: 'text-violet-600',  bg: 'bg-violet-500/10 border-violet-500/20 hover:bg-violet-500/20' },
-  { role: 'finance',    key: 'finance',   label: 'Finance Review',    name: 'Priya Sharma', icon: Wallet,        color: 'text-emerald-600', bg: 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20' },
-  { role: 'sales_head', key: 'sales_head',label: 'Sales Head / VP',  name: 'Ananya Iyer',  icon: ClipboardCheck, color: 'text-amber-600', bg: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/20'    },
-  { role: 'ops',        key: 'chetan',    label: 'Ops Executive',     name: 'Chetan',       icon: ClipboardList, color: 'text-sky-600',   bg: 'bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/20' },
-  { role: 'admin',      key: 'admin',     label: 'System Admin',      name: 'Rahul Kapoor', icon: Settings,      color: 'text-foreground',  bg: 'bg-muted border-border hover:bg-muted/80'    },
-]
-
 export function LoginPage() {
   const navigate = useNavigate()
-  const { login, loginDemo, user, isLoading } = useAuthStore()
+  const { login, user, isLoading } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [demoLoading, setDemoLoading] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) navigate('/dashboard', { replace: true })
@@ -96,21 +74,6 @@ export function LoginPage() {
       const msg = err.message || 'Authentication failed. Please verify credentials.'
       setError(msg)
       toast.error(msg, { id: toastId, duration: 1500 })
-    }
-  }
-
-  const handleDemoLogin = (item: typeof DEMO_ROLES[0]) => {
-    try {
-      setDemoLoading(item.key)
-      const customUser = DEMO_USERS[item.key] || DEMO_USERS.sales
-      loginDemo(item.role, customUser)
-      toast.success(`Demo mode — signed in as ${item.name || customUser.full_name}`, { duration: 1500 })
-      navigate('/dashboard', { replace: true })
-    } catch (e) {
-      console.error('Demo login error:', e)
-      toast.error('Failed to start demo session.')
-    } finally {
-      setDemoLoading(null)
     }
   }
 
@@ -149,47 +112,7 @@ export function LoginPage() {
           </motion.p>
         </div>
 
-        {/* ── Demo Access Panel ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.05 }}
-          className="rounded-2xl bg-gradient-to-br from-card to-card/50 border border-border shadow-sm p-3.5 sm:p-5"
-        >
-          <div className="flex items-center gap-2.5 mb-3 sm:mb-4">
-            <div className="h-7 sm:h-8 w-7 sm:w-8 rounded-xl bg-primary flex items-center justify-center shadow-sm shrink-0">
-              <Zap className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary-foreground" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm font-bold text-foreground">Try Demo — Instant Role Login</p>
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Select any team persona to explore live workspace data</p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {DEMO_ROLES.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                id={`demo-${item.key}`}
-                onClick={() => handleDemoLogin(item)}
-                disabled={demoLoading !== null}
-                className={`relative flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer disabled:opacity-60 shadow-sm hover:shadow-md ${item.bg}`}
-              >
-                <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-background border border-border shadow-sm">
-                  <item.icon className={`h-4 w-4 ${item.color}`} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className={`text-[11px] font-bold leading-tight ${item.color}`}>{item.label}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{item.name}</p>
-                </div>
-                {demoLoading === item.key && (
-                  <div className={`ml-auto h-3.5 w-3.5 border-2 border-t-transparent rounded-full animate-spin ${item.color.replace('text-', 'border-')}`} />
-                )}
-              </button>
-            ))}
-          </div>
-        </motion.div>
 
         {/* Corporate Login Card */}
         <motion.div

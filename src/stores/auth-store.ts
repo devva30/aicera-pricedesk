@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, UserRole } from '@/types'
-import { DEMO_USERS } from '@/lib/mock-data'
 import { auth, db } from '@/lib/firebase'
 import {
   signInWithEmailAndPassword,
@@ -20,7 +19,6 @@ interface AuthState {
   setLoading: (loading: boolean) => void
   login: (email: string, password: string, role?: UserRole) => Promise<{ redirectWarning?: string } | void>
   signup: (email: string, password: string, fullName: string, role?: UserRole) => Promise<void>
-  loginDemo: (roleOrKey: UserRole | string, customUser?: User) => void
   logout: () => Promise<void>
   initialize: () => Promise<void>
 }
@@ -36,114 +34,8 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
       setLoading: (isLoading) => set({ isLoading }),
 
-      loginDemo: (roleOrKey, customUser) => {
-        if (customUser) {
-          set({
-            user: customUser,
-            session: { access_token: `demo-token-${customUser.id}` },
-            isDemo: true,
-            isLoading: false,
-          })
-          return
-        }
-
-        const role = roleOrKey as UserRole
-        const DEMO_PROFILES: Record<UserRole, User> = {
-          sales_rep: {
-            id: 'demo-sales',
-            email: 'arjun.mehta@pricedesk.in',
-            full_name: 'Arjun Mehta',
-            role: 'sales_rep',
-            department: 'Enterprise Sales',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          finance: {
-            id: 'demo-finance',
-            email: 'priya.sharma@pricedesk.in',
-            full_name: 'Priya Sharma',
-            role: 'finance',
-            department: 'Finance',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          technical: {
-            id: 'demo-technical',
-            email: 'vikram.patel@pricedesk.in',
-            full_name: 'Vikram Patel',
-            role: 'technical',
-            department: 'Solutions Engineering',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          sales_head: {
-            id: 'demo-head',
-            email: 'ananya.iyer@pricedesk.in',
-            full_name: 'Ananya Iyer',
-            role: 'sales_head',
-            department: 'Sales Leadership',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          admin: {
-            id: 'demo-admin',
-            email: 'admin@pricedesk.in',
-            full_name: 'Rahul Kapoor',
-            role: 'admin',
-            department: 'IT Administration',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          ops: {
-            id: 'demo-ops-chetan',
-            email: 'chetan@pricedesk.in',
-            full_name: 'Chetan',
-            role: 'ops',
-            department: 'Operations & Procurement',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        }
-        set({
-          user: DEMO_PROFILES[role] || DEMO_PROFILES.sales_rep,
-          session: { access_token: `demo-token-${role}` },
-          isDemo: true,
-          isLoading: false,
-        })
-      },
-
       login: async (email, password, role) => {
         set({ isLoading: true })
-
-        // Auto-authenticate demo emails or demo domain
-        const normalizedEmail = email.trim().toLowerCase()
-        const matchedDemo = Object.values(DEMO_USERS).find(
-          (u) => u.email.toLowerCase() === normalizedEmail
-        )
-        if (matchedDemo || normalizedEmail.endsWith('@pricedesk.in')) {
-          const userObj = matchedDemo || {
-            id: `demo-${role || 'sales'}`,
-            email: normalizedEmail,
-            full_name: email.split('@')[0].replace('.', ' ').toUpperCase(),
-            role: role || 'sales_rep',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }
-          set({
-            user: userObj,
-            session: { access_token: `demo-token-${userObj.id}` },
-            isDemo: true,
-            isLoading: false,
-          })
-          return
-        }
 
         try {
           const userCredential = await signInWithEmailAndPassword(auth, email, password)
@@ -236,8 +128,10 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        if (!get().isDemo) {
+        try {
           await signOut(auth)
+        } catch (e) {
+          console.error('Logout error:', e)
         }
         set({ user: null, session: null, isDemo: false })
       },
@@ -245,7 +139,7 @@ export const useAuthStore = create<AuthState>()(
       initialize: async () => {
         // Set up the persistent Firebase Auth listener
         onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser && !get().isDemo) {
+          if (firebaseUser) {
             try {
               const docRef = doc(db, 'users', firebaseUser.uid)
               const docSnap = await getDoc(docRef)
@@ -264,10 +158,8 @@ export const useAuthStore = create<AuthState>()(
               console.error('Failed to load user profile during initialization:', err)
               set({ isLoading: false })
             }
-          } else if (!get().isDemo) {
-            set({ user: null, session: null, isLoading: false })
           } else {
-            set({ isLoading: false })
+            set({ user: null, session: null, isDemo: false, isLoading: false })
           }
         })
       },
