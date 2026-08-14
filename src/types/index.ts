@@ -140,6 +140,8 @@ export interface Deal {
   approved_by?: string | null
   created_at: string
   updated_at: string
+  sales_rep_name?: string | null
+  deal_date?: string | null
   creator?: User
   items?: DealItem[]
   overheads?: DealOverhead[]

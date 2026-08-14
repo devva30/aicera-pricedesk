@@ -469,8 +469,8 @@ function numberToWords(num: number): string {
 function resolveMergeTags(text: string, deal: Deal, settings: any, grandTotal: number): string {
   if (!text) return ''
   const quoteNo = deal.quote_number || deal.deal_number || 'QT-2026-001'
-  const dateStr = formatDate(deal.created_at)
-  const preparedBy = deal.creator?.full_name || 'Sales Team'
+  const dateStr = formatDate(deal.deal_date || deal.created_at)
+  const preparedBy = deal.sales_rep_name || deal.creator?.full_name || 'Sales Team'
   const clientName = deal.customer_name || 'Client'
   const companyName = settings.company_name || 'Aicera Systems'
 
@@ -522,12 +522,12 @@ export function QuotePDFDocument({ deal, settings: propSettings }: { deal: Deal;
 
   const validityDays = deal.validity_period || 30
   const termsText = deal.terms_conditions !== undefined && deal.terms_conditions !== null ? deal.terms_conditions : 'Payment Terms: Net 30 days\nDelivery: 4-5 weeks'
-  const preparedBy = deal.creator?.full_name || 'Sales Team'
+  const preparedBy = deal.sales_rep_name || deal.creator?.full_name || 'Sales Team'
   const isQuote = deal.is_quote_only ?? false
   const docTypeLabel = isQuote ? 'Commercial Proposal' : 'Commercial Deal Summary'
   const docNumberLabel = isQuote ? 'Quote No.' : 'Deal No.'
   const quoteNo = isQuote ? (deal.quote_number || deal.deal_number || 'QT-2026-001') : (deal.deal_number || deal.quote_number || 'PD-2026-001')
-  const quoteDate = formatDate(deal.created_at)
+  const quoteDate = formatDate(deal.deal_date || deal.created_at)
 
   // ── Use ONLY explicitly uploaded BOM data — no auto-generated fallback ────────
   let rawBomData: BOMItem[] = []

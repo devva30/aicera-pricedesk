@@ -51,7 +51,7 @@ const dealSchema = z.object({
   title: z.string().min(1, 'Deal Name is required'), // Allow 1+ character names like HP
   customer_name: z.string().min(1, 'Customer is required'), // Allow 1+ character names
   sales_rep_name: z.string().min(1, 'Sales Rep is required'),
-  date_str: z.string().optional(),
+  date_str: z.string().min(1, 'Deal Date is required'),
   currency: z.string(),
   oem: z.string().optional(),
   quote_number: z.string().optional(),
@@ -158,23 +158,30 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
     loadQuotes()
   }, [currentUser])
 
-  // Format current date for the form
+  // Format initial deal date for date input (YYYY-MM-DD)
   const defaultDateStr = useMemo(() => {
+    if (initialDeal?.deal_date) {
+      const d = new Date(initialDeal.deal_date)
+      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
+      return initialDeal.deal_date
+    }
+    if (initialDeal?.created_at) {
+      const d = new Date(initialDeal.created_at)
+      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
+    }
     const d = new Date()
-    const dd = String(d.getDate()).padStart(2, '0')
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
     const yyyy = d.getFullYear()
-    return `${dd}-${mm}-${yyyy}`
-  }, [])
-
-
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  }, [initialDeal])
 
   const form = useForm<DealFormValues>({
     resolver: zodResolver(dealSchema) as Resolver<DealFormValues>,
     defaultValues: {
       title: initialDeal?.title ?? '',
       customer_name: initialDeal?.customer_name ?? '',
-      sales_rep_name: initialDeal?.creator?.full_name ?? currentUser?.full_name ?? '',
+      sales_rep_name: initialDeal?.sales_rep_name ?? initialDeal?.creator?.full_name ?? currentUser?.full_name ?? '',
       date_str: defaultDateStr,
       currency: initialDeal?.currency ?? 'INR', // Use initial deal currency or default to Indian Rupee (INR)
       oem: initialDeal?.oem ?? '',
@@ -360,6 +367,9 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
       title: data.title,
       customer_name: data.customer_name,
       customer_id: customerId ?? 'CUST-' + Math.floor(1000 + Math.random() * 9000),
+      sales_rep_name: data.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep',
+      deal_date: data.date_str,
+      created_at: data.date_str ? new Date(data.date_str).toISOString() : new Date().toISOString(),
       description: data.title + ' commercial pricing sheet',
       currency: data.currency,
       oem: data.oem?.trim() || null,
@@ -418,6 +428,9 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
       title: values.title.trim(),
       customer_name: customerName,
       customer_id: customerId ?? 'CUST-' + Math.floor(1000 + Math.random() * 9000),
+      sales_rep_name: values.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep',
+      deal_date: values.date_str || defaultDateStr,
+      created_at: values.date_str ? new Date(values.date_str).toISOString() : new Date().toISOString(),
       description: values.title.trim() + ' commercial pricing sheet (Draft)',
       currency: values.currency || 'INR',
       oem: values.oem?.trim() || null,
@@ -625,20 +638,26 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
                 Sales Rep Name <span className="text-primary font-bold">*</span>
               </Label>
               <Input
-                value={form.watch('sales_rep_name')}
-                disabled
-                className="mt-1.5 bg-muted/50 h-12 border-border text-sm text-muted-foreground cursor-not-allowed rounded-lg"
+                {...form.register('sales_rep_name')}
+                placeholder="e.g. Laxman Kamath"
+                className="mt-1.5 bg-background h-12 border-border text-sm focus:ring-1 focus:ring-primary focus:border-primary rounded-lg transition-all"
               />
+              {form.formState.errors.sales_rep_name && (
+                <p className="text-[11px] text-destructive mt-1 font-medium">{form.formState.errors.sales_rep_name.message}</p>
+              )}
             </div>
             <div>
               <Label className="text-xs font-semibold text-foreground flex items-center gap-1">
                 Deal Date <span className="text-primary font-bold">*</span>
               </Label>
               <Input
+                type="date"
                 {...form.register('date_str')}
-                disabled
-                className="mt-1.5 bg-muted/40 h-12 border-border text-sm text-muted-foreground cursor-not-allowed rounded-lg font-mono"
+                className="mt-1.5 bg-background h-12 border-border text-sm focus:ring-1 focus:ring-primary focus:border-primary rounded-lg transition-all font-mono cursor-pointer"
               />
+              {form.formState.errors.date_str && (
+                <p className="text-[11px] text-destructive mt-1 font-medium">{form.formState.errors.date_str.message}</p>
+              )}
             </div>
             <div>
               <Label className="text-xs font-semibold text-foreground block">&nbsp;</Label>

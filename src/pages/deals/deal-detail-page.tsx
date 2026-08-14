@@ -720,7 +720,7 @@ export function DealDetailPage() {
                       </div>
                       <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
                         <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Deal Owner (Sales Rep)</span>
-                        <span className="font-semibold text-foreground">{deal.creator?.full_name} ({deal.creator?.email})</span>
+                        <span className="font-semibold text-foreground">{deal.sales_rep_name || deal.creator?.full_name || 'N/A'}{deal.creator?.email ? ` (${deal.creator.email})` : ''}</span>
                       </div>
                       <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
                         <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Assigned Reviewer</span>
@@ -733,8 +733,8 @@ export function DealDetailPage() {
                     </>
                   )}
                   <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
-                    <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Created Date</span>
-                    <span className="font-semibold text-foreground">{formatDate(deal.created_at)}</span>
+                    <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Deal Date</span>
+                    <span className="font-semibold text-foreground">{formatDate(deal.deal_date || deal.created_at)}</span>
                   </div>
                   <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
                     <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Last Modified Date</span>

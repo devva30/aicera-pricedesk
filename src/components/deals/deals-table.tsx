@@ -254,8 +254,13 @@ export function DealsTable({
       ...(showCreator
         ? [
             {
-              accessorKey: 'creator.full_name',
+              id: 'creator',
               header: 'Rep',
+              cell: ({ row }: any) => (
+                <span className="text-xs text-muted-foreground font-medium">
+                  {row.original.sales_rep_name || row.original.creator?.full_name || '—'}
+                </span>
+              ),
             } as ColumnDef<Deal>,
           ]
         : []),
