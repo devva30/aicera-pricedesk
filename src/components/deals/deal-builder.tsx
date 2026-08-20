@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { cn, formatCurrency, formatPercent, getMarginBg, getMarginColor } from '@/lib/utils'
+import { cn, formatCurrency, formatPercent, getMarginBg, getMarginColor, getValueSizeClass } from '@/lib/utils'
 import type { Deal, DealItem, DealOverhead } from '@/types'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
@@ -1213,61 +1213,62 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
 
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {/* Card 1: Total Cost */}
-            <div className="bg-muted/15 border border-border p-4 rounded-xl hover:shadow-sm transition-all duration-200">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <div className="bg-muted/15 border border-border p-4 rounded-xl hover:shadow-sm transition-all duration-200 min-w-0 overflow-hidden">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
                 Total Cost
               </p>
-              <p className="text-2xl font-extrabold font-display text-foreground mt-1 font-mono">
+              <p className={cn("font-extrabold mt-1 font-mono tracking-tight tabular-nums truncate", getValueSizeClass(formatCurrency(totalCost, 'INR')))} title={formatCurrency(totalCost, 'INR')}>
                 {formatCurrency(totalCost, 'INR')}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">
+              <p className="text-[10px] text-muted-foreground mt-1 truncate">
                 Incl. {formatCurrency(overheadTotal, 'INR')} overheads
               </p>
             </div>
 
             {/* Card 2: Total Revenue */}
-            <div className="bg-muted/15 border border-border p-4 rounded-xl hover:shadow-sm transition-all duration-200">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <div className="bg-muted/15 border border-border p-4 rounded-xl hover:shadow-sm transition-all duration-200 min-w-0 overflow-hidden">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
                 Total Revenue
               </p>
-              <p className="text-2xl font-extrabold font-display text-foreground mt-1 font-mono">
+              <p className={cn("font-extrabold mt-1 font-mono tracking-tight tabular-nums truncate", getValueSizeClass(formatCurrency(totalRevenue, 'INR')))} title={formatCurrency(totalRevenue, 'INR')}>
                 {formatCurrency(totalRevenue, 'INR')}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">
+              <p className="text-[10px] text-muted-foreground mt-1 truncate">
                 {itemFields.length} line item(s) configured
               </p>
             </div>
 
             {/* Card 3: Net Value */}
             <div className={cn(
-              'border p-4 rounded-xl hover:shadow-sm transition-all duration-200',
+              'border p-4 rounded-xl hover:shadow-sm transition-all duration-200 min-w-0 overflow-hidden',
               (totalRevenue - totalCost) >= 0
                 ? 'bg-emerald-500/5 border-emerald-500/25'
                 : 'bg-red-500/5 border-red-500/25'
             )}>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
                 Net Value
               </p>
               <p className={cn(
-                'text-2xl font-extrabold font-display mt-1 font-mono',
+                'font-extrabold mt-1 font-mono tracking-tight tabular-nums truncate',
+                getValueSizeClass(formatCurrency(totalRevenue - totalCost, 'INR')),
                 (totalRevenue - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-500'
-              )}>
+              )} title={formatCurrency(totalRevenue - totalCost, 'INR')}>
                 {formatCurrency(totalRevenue - totalCost, 'INR')}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">
+              <p className="text-[10px] text-muted-foreground mt-1 truncate">
                 Revenue minus total cost
               </p>
             </div>
 
             {/* Card 4: Net Margin % */}
-            <div className={`border p-4 rounded-xl hover:shadow-sm transition-all duration-200 ${marginBg}`}>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+            <div className={`border p-4 rounded-xl hover:shadow-sm transition-all duration-200 min-w-0 overflow-hidden ${marginBg}`}>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">
                 Net Margin %
               </p>
-              <p className={`text-2xl font-extrabold font-display mt-1 font-mono ${marginColor}`}>
+              <p className={cn("font-extrabold mt-1 font-mono tracking-tight tabular-nums truncate", getValueSizeClass(formatPercent(netMarginPct)), marginColor)}>
                 {formatPercent(netMarginPct)}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">
+              <p className="text-[10px] text-muted-foreground mt-1 truncate">
                 {netMarginPct >= 8 ? '✅ Above floor margin' : '⚠️ Below floor margin (8%)'}
               </p>
             </div>

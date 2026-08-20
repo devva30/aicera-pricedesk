@@ -60,3 +60,11 @@ export function getMarginBg(pct: number | undefined | null): string {
   if (tier === 'success') return 'bg-emerald-500/10 border-emerald-500/20'
   return 'bg-red-500/10 border-red-500/20'
 }
+
+export function getValueSizeClass(value: string): string {
+  const len = value ? value.length : 0
+  if (len > 14) return 'text-[10px] sm:text-[11px] md:text-xs font-mono tracking-tighter'
+  if (len > 10) return 'text-[11px] sm:text-xs md:text-xs font-mono tracking-tighter'
+  if (len > 7) return 'text-xs sm:text-xs md:text-sm font-mono tracking-tight'
+  return 'text-sm sm:text-base md:text-base font-mono tracking-tight'
+}

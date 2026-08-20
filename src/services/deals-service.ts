@@ -1,5 +1,5 @@
 import type { Deal, DealAudit, DealItem, DealOverhead, DealStatus, UserRole } from '@/types'
-import { calculateMargins } from '@/lib/margins'
+import { calculateMargins, ensureDealMargins } from '@/lib/margins'
 import { getNextStatus } from '@/lib/workflow'
 import { DEMO_USERS, MOCK_AUDIT_LOG, MOCK_DEALS, addMockDeal, deleteMockDeal, appendMockAudit, updateMockDeal, appendMockNotification, MOCK_QUOTES, addMockQuote, updateMockQuote, deleteMockQuote } from '@/lib/mock-data'
 import { fetchSettings } from './targets-service'
@@ -121,7 +121,7 @@ export async function fetchDeals(role: UserRole, userId: string): Promise<Deal[]
       list.push({ id: doc.id, ...doc.data() } as Deal)
     })
 
-    return filterDealsByRole(list, role, userId)
+    return filterDealsByRole(list.map(ensureDealMargins), role, userId)
   } catch (err) {
     console.error('fetchDeals query error:', err)
     try {
@@ -131,17 +131,17 @@ export async function fetchDeals(role: UserRole, userId: string): Promise<Deal[]
         list.push({ id: doc.id, ...doc.data() } as Deal)
       })
       list.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime())
-      return filterDealsByRole(list, role, userId)
+      return filterDealsByRole(list.map(ensureDealMargins), role, userId)
     } catch (e) {
       console.error('fetchDeals fallback error:', e)
-      return filterDealsByRole([...MOCK_DEALS], role, userId)
+      return filterDealsByRole(MOCK_DEALS.map(ensureDealMargins), role, userId)
     }
   }
 }
 
 export async function fetchQuotes(role: UserRole, userId: string): Promise<Deal[]> {
   if (useAuthStore.getState().isDemo) {
-    return filterDealsByRole([...MOCK_QUOTES], role, userId)
+    return filterDealsByRole(MOCK_QUOTES.map(ensureDealMargins), role, userId)
   }
 
   const quotesCol = collection(db, 'quotes')
@@ -153,7 +153,7 @@ export async function fetchQuotes(role: UserRole, userId: string): Promise<Deal[
     list.push({ id: doc.id, ...doc.data() } as Deal)
   })
 
-  return filterDealsByRole(list, role, userId)
+  return filterDealsByRole(list.map(ensureDealMargins), role, userId)
 }
 
 export async function fetchQuotesByDealId(dealId: string, dealObj?: Deal | null): Promise<Deal[]> {
@@ -243,7 +243,7 @@ export async function fetchQuotesByDealId(dealId: string, dealObj?: Deal | null)
     })
   }
 
-  return result.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime())
+  return result.map(ensureDealMargins).sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime())
 }
 
 import { deleteOrdersByDealId } from './orders-service'
@@ -498,7 +498,7 @@ export async function fetchDealById(id: string): Promise<Deal | null> {
     }
   }
 
-  return resultDeal
+  return resultDeal ? ensureDealMargins(resultDeal) : null
 }
 
 export async function fetchDealAudit(dealId: string): Promise<DealAudit[]> {
@@ -770,6 +770,7 @@ export async function saveDeal(
     total_revenue: totalRevenue,
     total_cost: margins.totalCost,
     gross_margin_pct: margins.grossMarginPct,
+    net_margin_pct: margins.netMarginPct,
     sales_rep_name: deal.sales_rep_name ?? deal.creator?.full_name ?? null,
     deal_date: deal.deal_date ?? (deal.created_at ? deal.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
     created_at: deal.created_at ?? (deal.deal_date ? new Date(deal.deal_date).toISOString() : new Date().toISOString()),

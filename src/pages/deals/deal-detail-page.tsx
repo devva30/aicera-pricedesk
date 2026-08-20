@@ -13,10 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthStore } from '@/stores/auth-store'
 import { SlaTimer } from '@/components/shared/sla-timer'
 import { fetchDealAudit, fetchDealById, fetchQuotesByDealId, deleteDeal, deleteQuote } from '@/services/deals-service'
+import { ensureDealMargins } from '@/lib/margins'
 import { updateDeal, removeDeal } from '@/store/deals-slice'
 import { Fragment } from 'react'
 import { DEAL_STATUS_LABELS, type Deal, type DealAudit, type DealVersion, type BOMItem } from '@/types'
-import { cn, formatCurrency, formatPercent, formatDate, formatRelative, getMarginColor } from '@/lib/utils'
+import { cn, formatCurrency, formatPercent, formatDate, formatRelative, getMarginColor, getValueSizeClass } from '@/lib/utils'
 import { pdf } from '@react-pdf/renderer'
 import { QuotePDFDocument } from '@/components/deals/PDFDocument'
 import { SignaturePad } from '@/components/deals/signature-pad'
@@ -134,8 +135,9 @@ export function DealDetailPage() {
         }
 
         if (finalDealWithBom) {
-          setDeal(finalDealWithBom)
-          dispatch(updateDeal(finalDealWithBom))
+          const safeDeal = ensureDealMargins(finalDealWithBom)
+          setDeal(safeDeal)
+          dispatch(updateDeal(safeDeal))
         } else if (!deal) {
           setDeal(null)
         }
@@ -510,11 +512,11 @@ export function DealDetailPage() {
               {deal.creator?.full_name ?? 'System'}
             </p>
           </div>
-          <div className="border-r border-border/40 pr-4 last:border-0">
-            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1">
-              <Landmark className="h-3 w-3" /> {isQuoteView ? 'Quote Value' : 'Total Revenue'}
+          <div className="border-r border-border/40 pr-4 min-w-0 overflow-hidden last:border-0">
+            <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1 truncate">
+              <Landmark className="h-3 w-3 shrink-0" /> {isQuoteView ? 'Quote Value' : 'Total Revenue'}
             </p>
-            <p className="font-bold text-foreground mt-1.5 text-sm tabular-nums">
+            <p className="font-bold text-foreground mt-1.5 text-sm tabular-nums truncate" title={formatCurrency(deal.total_revenue, deal.currency)}>
               {formatCurrency(deal.total_revenue, deal.currency)}
             </p>
           </div>
@@ -522,9 +524,16 @@ export function DealDetailPage() {
             <p className="text-muted-foreground font-semibold flex items-center gap-1">
               <Percent className="h-3 w-3" /> {isQuoteView ? 'Gross Margin' : 'Net Margin'}
             </p>
-            <p className={cn('font-bold mt-1 text-sm', getMarginColor(isQuoteView ? deal.gross_margin_pct : deal.net_margin_pct))}>
-              {formatPercent(isQuoteView ? deal.gross_margin_pct : deal.net_margin_pct)}
-            </p>
+            {(() => {
+              const marginVal = isQuoteView
+                ? (deal.gross_margin_pct ?? 0)
+                : (deal.net_margin_pct ?? (deal.total_revenue > 0 ? ((deal.total_revenue - (deal.total_cost ?? 0)) / deal.total_revenue) * 100 : (deal.gross_margin_pct ?? 0)))
+              return (
+                <p className={cn('font-bold mt-1 text-sm', getMarginColor(marginVal))}>
+                  {formatPercent(marginVal)}
+                </p>
+              )
+            })()}
           </div>
           {!isQuoteView && (
             <div>
@@ -798,36 +807,52 @@ export function DealDetailPage() {
                     })()}
                   </div>
                 ) : (
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 pt-4 print:grid-cols-5">
-                    <div className="bg-muted/20 border border-border p-3.5 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Revenue</p>
-                      <p className="text-lg font-bold mt-1 text-foreground">{formatCurrency(deal.total_revenue, deal.currency)}</p>
+                  <div className="grid gap-2.5 sm:gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 pt-4 print:grid-cols-5">
+                    <div className="bg-muted/20 border border-border px-2 py-3 rounded-xl text-center min-w-0 overflow-hidden">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider truncate">Total Revenue</p>
+                      <p className={cn("font-bold mt-1 text-foreground tabular-nums whitespace-nowrap", getValueSizeClass(formatCurrency(deal.total_revenue, deal.currency)))} title={formatCurrency(deal.total_revenue, deal.currency)}>
+                        {formatCurrency(deal.total_revenue, deal.currency)}
+                      </p>
                     </div>
-                    <div className="bg-muted/20 border border-border p-3.5 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Costs</p>
-                      <p className="text-lg font-bold mt-1 text-foreground">{formatCurrency(deal.total_cost, deal.currency)}</p>
+                    <div className="bg-muted/20 border border-border px-2 py-3 rounded-xl text-center min-w-0 overflow-hidden">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider truncate">Total Costs</p>
+                      <p className={cn("font-bold mt-1 text-foreground tabular-nums whitespace-nowrap", getValueSizeClass(formatCurrency(deal.total_cost, deal.currency)))} title={formatCurrency(deal.total_cost, deal.currency)}>
+                        {formatCurrency(deal.total_cost, deal.currency)}
+                      </p>
                     </div>
                     <div className={cn(
-                      'border p-3.5 rounded text-center',
+                      'border px-2 py-3 rounded-xl text-center min-w-0 overflow-hidden',
                       (deal.total_revenue - deal.total_cost) >= 0
                         ? 'bg-emerald-500/5 border-emerald-500/25'
                         : 'bg-red-500/5 border-red-500/25'
                     )}>
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Net Value</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider truncate">Net Value</p>
                       <p className={cn(
-                        'text-lg font-bold mt-1',
+                        'font-bold mt-1 tabular-nums whitespace-nowrap',
+                        getValueSizeClass(formatCurrency(deal.total_revenue - deal.total_cost, deal.currency)),
                         (deal.total_revenue - deal.total_cost) >= 0 ? 'text-emerald-600' : 'text-red-500'
-                      )}>
+                      )} title={formatCurrency(deal.total_revenue - deal.total_cost, deal.currency)}>
                         {formatCurrency(deal.total_revenue - deal.total_cost, deal.currency)}
                       </p>
                     </div>
-                    <div className="bg-muted/20 border border-border p-3.5 rounded text-center">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Gross Margin</p>
-                      <p className={cn('text-lg font-bold mt-1', getMarginColor(deal.gross_margin_pct))}>{formatPercent(deal.gross_margin_pct)}</p>
+                    <div className="bg-muted/20 border border-border px-2 py-3 rounded-xl text-center min-w-0 overflow-hidden">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider truncate">Gross Margin</p>
+                      <p className={cn('font-bold mt-1 tabular-nums whitespace-nowrap', getValueSizeClass(formatPercent(deal.gross_margin_pct)), getMarginColor(deal.gross_margin_pct))}>
+                        {formatPercent(deal.gross_margin_pct)}
+                      </p>
                     </div>
-                    <div className="bg-primary/5 border border-primary/20 p-3.5 rounded text-center">
-                      <p className="text-[10px] text-primary uppercase font-bold tracking-wider">Net Margin</p>
-                      <p className={cn('text-xl font-extrabold mt-1', getMarginColor(deal.net_margin_pct))}>{formatPercent(deal.net_margin_pct)}</p>
+                    <div className="bg-primary/5 border border-primary/20 px-2 py-3 rounded-xl text-center min-w-0 overflow-hidden">
+                      <p className="text-[10px] text-primary uppercase font-bold tracking-wider truncate">Net Margin</p>
+                      {(() => {
+                        const netVal = (deal.net_margin_pct !== undefined && deal.net_margin_pct !== null && !isNaN(Number(deal.net_margin_pct)))
+                          ? Number(deal.net_margin_pct)
+                          : (deal.total_revenue > 0 ? ((deal.total_revenue - (deal.total_cost ?? 0)) / deal.total_revenue) * 100 : (deal.gross_margin_pct ?? 0))
+                        return (
+                          <p className={cn('font-extrabold mt-1 tabular-nums whitespace-nowrap', getValueSizeClass(formatPercent(netVal)), getMarginColor(netVal))}>
+                            {formatPercent(netVal)}
+                          </p>
+                        )
+                      })()}
                     </div>
                   </div>
                 )}
