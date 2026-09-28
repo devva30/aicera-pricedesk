@@ -141,6 +141,7 @@ export interface Deal {
   created_at: string
   updated_at: string
   sales_rep_name?: string | null
+  sales_rep_id?: string | null
   deal_date?: string | null
   creator?: User
   items?: DealItem[]

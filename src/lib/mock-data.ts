@@ -34,6 +34,16 @@ export const DEMO_USERS: Record<string, User> = {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
+  sales_3: {
+    id: 'demo-sales-3',
+    email: 'rahul.sales@pricedesk.in',
+    full_name: 'Rahul',
+    role: 'sales_rep',
+    department: 'Commercial Sales',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
   finance: {
     id: 'demo-finance',
     email: 'priya.sharma@pricedesk.in',

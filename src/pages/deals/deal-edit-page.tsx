@@ -34,7 +34,11 @@ export function DealEditPage() {
         const d = await fetchDealById(id)
         if (d) {
           // Check authorization: only creator (sales_rep) or admin can edit
-          if (d.created_by !== user.id && user.role !== 'admin') {
+          const isOwner =
+            d.created_by === user.id ||
+            d.creator?.id === user.id ||
+            (user.full_name && d.sales_rep_name && d.sales_rep_name.toLowerCase() === user.full_name.toLowerCase())
+          if (!isOwner && user.role !== 'admin') {
             toast.error('You do not have permission to edit this deal')
             navigate(`${isQuoteEdit ? '/quotes' : '/deals'}/${id}`)
             return
@@ -101,18 +105,23 @@ export function DealEditPage() {
           ? `${baseDealNumber}-v${newVersions.length + 1}`
           : deal?.deal_number
 
+      const targetSalesRepId = data.sales_rep_id || (user?.role !== 'admin' ? deal?.created_by : undefined)
+      const effectiveCreatedBy = targetSalesRepId || deal?.created_by || user.id
+
       const updated = await saveDeal(
         {
           ...data,
           id: id,
           deal_number: versionedDealNumber,
+          created_by: effectiveCreatedBy,
+          sales_rep_id: data.sales_rep_id,
           status: isDraft ? 'draft' : (data.requires_technical ? 'pending_technical' : 'pending_finance'),
           previous_versions: newVersions,
           // Pass flag so deals-service can send the right notifications
           _isApprovedResubmit: isApprovedEdit && !isDraft,
           _versionNumber: newVersions.length + 1,
         },
-        user.id
+        effectiveCreatedBy
       )
       dispatch(updateDeal(updated))
       if (isDraft) {

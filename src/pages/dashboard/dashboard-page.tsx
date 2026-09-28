@@ -267,9 +267,18 @@ export function DashboardPage() {
       if (!d) return false
       // Salesperson filter
       if (isSalesRep) {
-        if (d.created_by !== user.id) return false
+        const userName = user.full_name?.toLowerCase().trim()
+        const repName = d.sales_rep_name?.toLowerCase().trim()
+        const creatorName = d.creator?.full_name?.toLowerCase().trim()
+        const isMatch =
+          d.created_by === user.id ||
+          d.creator?.id === user.id ||
+          d.sales_rep_id === user.id ||
+          (userName && repName && (repName === userName || repName.includes(userName) || userName.includes(repName))) ||
+          (userName && creatorName && (creatorName === userName || creatorName.includes(userName) || userName.includes(creatorName)))
+        if (!isMatch) return false
       } else if (filterSalesperson !== 'all') {
-        if (d.created_by !== filterSalesperson) return false
+        if (d.created_by !== filterSalesperson && d.sales_rep_id !== filterSalesperson && d.sales_rep_name !== filterSalesperson) return false
       }
 
       // FY filter

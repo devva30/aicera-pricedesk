@@ -53,25 +53,30 @@ export function sanitizeForFirestore<T>(data: T): T {
 
 function filterDealsByRole(deals: Deal[], role: UserRole, userId: string): Deal[] {
   const currentUser = useAuthStore.getState().user
-  const userEmail = currentUser?.email?.toLowerCase()
-  const currentUserId = currentUser?.id || userId
+  const userEmail = currentUser?.email?.toLowerCase()?.trim()
+  const currentUserId = (currentUser?.id || userId).toLowerCase().trim()
+  const currentUserName = currentUser?.full_name?.toLowerCase().trim()
 
   switch (role) {
     case 'sales_rep':
       return deals.filter((d) => {
-        if (!d.created_by) return true
-        const cb = String(d.created_by).toLowerCase()
-        const uid = String(currentUserId).toLowerCase()
-        const em = userEmail ? String(userEmail).toLowerCase() : ''
-        const creatorId = d.creator?.id ? String(d.creator.id).toLowerCase() : ''
-        const creatorEmail = d.creator?.email ? String(d.creator.email).toLowerCase() : ''
+        if (!d.created_by && !d.sales_rep_name) return true
+        const cb = String(d.created_by || '').toLowerCase().trim()
+        const uid = currentUserId
+        const em = userEmail || ''
+        const creatorId = String(d.creator?.id || '').toLowerCase().trim()
+        const creatorEmail = String(d.creator?.email || '').toLowerCase().trim()
+        const repName = String(d.sales_rep_name || '').toLowerCase().trim()
+        const creatorName = String(d.creator?.full_name || '').toLowerCase().trim()
+
         return (
           cb === uid ||
           (em && cb === em) ||
           (creatorId && creatorId === uid) ||
           (em && creatorEmail === em) ||
-          cb === 'demo-sales' ||
-          uid === 'demo-sales'
+          (currentUserName && repName && (repName === currentUserName || repName.includes(currentUserName) || currentUserName.includes(repName))) ||
+          (currentUserName && creatorName && (creatorName === currentUserName || creatorName.includes(currentUserName) || currentUserName.includes(creatorName))) ||
+          (uid === 'demo-sales' && (cb === 'demo-sales' || repName.includes('arjun')))
         )
       })
     case 'technical':
@@ -572,7 +577,26 @@ export async function saveDeal(
 
   if (useAuthStore.getState().isDemo || !isFirebaseConfigured()) {
     const id = deal.id ?? `deal-${Date.now()}`
-    const creatorUser = Object.values(DEMO_USERS).find((u) => u.id === userId)
+    const effectiveUserId = deal.created_by || (deal as any).sales_rep_id || userId
+    let creatorUser = Object.values(DEMO_USERS).find((u) => u.id === effectiveUserId)
+    if (!creatorUser && deal.sales_rep_name) {
+      creatorUser = Object.values(DEMO_USERS).find(
+        (u) => u.full_name?.toLowerCase() === deal.sales_rep_name?.toLowerCase()
+      )
+    }
+    if (!creatorUser && deal.sales_rep_name) {
+      creatorUser = {
+        id: effectiveUserId,
+        full_name: deal.sales_rep_name,
+        email: `${deal.sales_rep_name.toLowerCase().replace(/\s+/g, '.')}@pricedesk.in`,
+        role: 'sales_rep',
+        department: 'Sales',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    }
+
     const isQuoteOnly = deal.is_quote_only ?? false
     const defaultDocNum = isQuoteOnly
       ? `QT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`
@@ -590,7 +614,7 @@ export async function saveDeal(
       parent_deal_id: deal.parent_deal_id ?? null,
       description: deal.description,
       status: deal.status ?? 'draft',
-      created_by: deal.created_by || userId,
+      created_by: creatorUser?.id || effectiveUserId,
       currency: deal.currency ?? 'INR',
       requires_technical: deal.requires_technical ?? false,
       oem: deal.oem ?? null,
@@ -600,7 +624,8 @@ export async function saveDeal(
       total_cost: margins.totalCost,
       gross_margin_pct: margins.grossMarginPct,
       net_margin_pct: margins.netMarginPct,
-      sales_rep_name: deal.sales_rep_name ?? deal.creator?.full_name ?? null,
+      sales_rep_name: deal.sales_rep_name ?? creatorUser?.full_name ?? deal.creator?.full_name ?? null,
+      sales_rep_id: creatorUser?.id || (deal as any).sales_rep_id || effectiveUserId,
       deal_date: deal.deal_date ?? (deal.created_at ? deal.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
       created_at: deal.created_at ?? (deal.deal_date ? new Date(deal.deal_date).toISOString() : new Date().toISOString()),
       updated_at: new Date().toISOString(),
@@ -761,7 +786,7 @@ export async function saveDeal(
     parent_deal_id: deal.parent_deal_id ?? null,
     description: deal.description ?? '',
     status: deal.status ?? 'draft',
-    created_by: deal.created_by || userId,
+    created_by: deal.created_by || (deal as any).sales_rep_id || userId,
     currency: deal.currency ?? 'INR',
     requires_technical: deal.requires_technical ?? false,
     oem: deal.oem ?? null,
@@ -772,6 +797,7 @@ export async function saveDeal(
     gross_margin_pct: margins.grossMarginPct,
     net_margin_pct: margins.netMarginPct,
     sales_rep_name: deal.sales_rep_name ?? deal.creator?.full_name ?? null,
+    sales_rep_id: (deal as any).sales_rep_id || deal.created_by || userId,
     deal_date: deal.deal_date ?? (deal.created_at ? deal.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
     created_at: deal.created_at ?? (deal.deal_date ? new Date(deal.deal_date).toISOString() : new Date().toISOString()),
     updated_at: new Date().toISOString(),
@@ -808,11 +834,48 @@ export async function saveDeal(
   }
 
   try {
-    // Fetch creator user details to cache inside the deal doc
-    const userRef = doc(db, 'users', userId)
-    const userSnap = await getDoc(userRef)
-    const creatorUser = userSnap.exists() ? { id: userId, ...userSnap.data() } as User : undefined
+    const effectiveUserId = deal.created_by || (deal as any).sales_rep_id || userId
+    let creatorUser: User | undefined = undefined
+
+    try {
+      const userRef = doc(db, 'users', effectiveUserId)
+      const userSnap = await getDoc(userRef)
+      if (userSnap.exists()) {
+        creatorUser = { id: effectiveUserId, ...userSnap.data() } as User
+      }
+    } catch (e) {
+      console.error('Error fetching creator user by ID:', e)
+    }
+
+    if (!creatorUser && deal.sales_rep_name) {
+      try {
+        const uq = query(collection(db, 'users'), where('full_name', '==', deal.sales_rep_name))
+        const uSnap = await getDocs(uq)
+        if (!uSnap.empty) {
+          const firstDoc = uSnap.docs[0]
+          creatorUser = { id: firstDoc.id, ...firstDoc.data() } as User
+        }
+      } catch (e) {
+        console.error('Error fetching creator user by name:', e)
+      }
+    }
+
+    if (!creatorUser && deal.sales_rep_name) {
+      creatorUser = {
+        id: effectiveUserId,
+        full_name: deal.sales_rep_name,
+        email: '',
+        role: 'sales_rep',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    }
+
+    saved.created_by = creatorUser?.id || effectiveUserId
     saved.creator = creatorUser
+    saved.sales_rep_name = deal.sales_rep_name || creatorUser?.full_name || null
+    saved.sales_rep_id = creatorUser?.id || (deal as any).sales_rep_id || effectiveUserId
 
     if (saved.is_quote_only) {
       addMockQuote(saved)

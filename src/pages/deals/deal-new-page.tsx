@@ -21,12 +21,17 @@ export function DealNewPage() {
     setSaving(true)
     const isDraft = submitType === 'draft'
     try {
+      const targetSalesRepId = data.sales_rep_id || (user?.role !== 'admin' ? userId : undefined)
+      const effectiveCreatedBy = targetSalesRepId || userId
+
       const deal = await saveDeal(
         {
           title: data.title,
           customer_name: data.customer_name,
           customer_id: data.customer_id,
           sales_rep_name: data.sales_rep_name,
+          sales_rep_id: data.sales_rep_id,
+          created_by: effectiveCreatedBy,
           deal_date: data.deal_date,
           created_at: data.created_at,
           description: data.description,
@@ -38,7 +43,7 @@ export function DealNewPage() {
           items: data.items,
           overheads: data.overheads,
         },
-        userId
+        effectiveCreatedBy
       )
       dispatch(addDeal(deal))
       if (isDraft) {

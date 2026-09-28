@@ -3,7 +3,7 @@ import { useFieldArray, useForm, useWatch, type Resolver } from 'react-hook-form
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, X, ArrowRight, ChevronDown, Upload, Clipboard, FileSpreadsheet, Briefcase, Layers, Trash2 } from 'lucide-react'
+import { Plus, X, ArrowRight, ChevronDown, Upload, Clipboard, FileSpreadsheet, Briefcase, Layers, Trash2, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,11 +23,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn, formatCurrency, formatPercent, getMarginBg, getMarginColor, getValueSizeClass } from '@/lib/utils'
-import type { Deal, DealItem, DealOverhead } from '@/types'
+import type { Deal, DealItem, DealOverhead, User } from '@/types'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchCustomers, saveCustomer } from '@/services/customers-service'
 import { fetchQuotes } from '@/services/deals-service'
+import { fetchUsers } from '@/services/users-service'
+import { DEMO_USERS } from '@/lib/mock-data'
 
 const num = (min = 0) =>
   z.preprocess(
@@ -51,6 +53,7 @@ const dealSchema = z.object({
   title: z.string().min(1, 'Deal Name is required'), // Allow 1+ character names like HP
   customer_name: z.string().min(1, 'Customer is required'), // Allow 1+ character names
   sales_rep_name: z.string().min(1, 'Sales Rep is required'),
+  sales_rep_id: z.string().optional(),
   date_str: z.string().min(1, 'Deal Date is required'),
   currency: z.string(),
   oem: z.string().optional(),
@@ -117,6 +120,7 @@ interface DealBuilderProps {
 export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilderProps) {
   const navigate = useNavigate()
   const currentUser = useAuthStore((s) => s.user)
+  const isAdmin = currentUser?.role === 'admin'
   const [submitType, setSubmitType] = useState<'draft' | 'submit'>('submit')
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -129,8 +133,15 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
   const [overheadQuery, setOverheadQuery] = useState('')
   const [quotes, setQuotes] = useState<Deal[]>([])
   const [showQuoteSuggestions, setShowQuoteSuggestions] = useState(false)
-
-
+  const [salesReps, setSalesReps] = useState<User[]>([])
+  const [isLoadingReps, setIsLoadingReps] = useState(false)
+  const [selectedRepId, setSelectedRepId] = useState<string>(
+    initialDeal?.sales_rep_id || initialDeal?.created_by || currentUser?.id || ''
+  )
+  const [showRepSuggestions, setShowRepSuggestions] = useState(false)
+  const [salesRepSearch, setSalesRepSearch] = useState<string>(
+    initialDeal?.sales_rep_name || initialDeal?.creator?.full_name || currentUser?.full_name || ''
+  )
 
   useEffect(() => {
     const load = async () => {
@@ -143,6 +154,98 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
     }
     load()
   }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    const loadReps = async () => {
+      setIsLoadingReps(true)
+      try {
+        const allUsers = await fetchUsers()
+        let reps = allUsers.filter((u) => u.role === 'sales_rep' && u.is_active !== false)
+
+        // Fallback to DEMO_USERS if no sales reps found in database
+        if (reps.length === 0) {
+          reps = Object.values(DEMO_USERS).filter((u) => u.role === 'sales_rep')
+        }
+
+        // Keep initial deal's sales rep available in dropdown if not already present
+        if (
+          initialDeal?.sales_rep_name &&
+          !reps.some((r) => r.full_name.toLowerCase() === initialDeal.sales_rep_name?.toLowerCase())
+        ) {
+          reps.push({
+            id: initialDeal.sales_rep_id || initialDeal.created_by || `rep-${Date.now()}`,
+            full_name: initialDeal.sales_rep_name,
+            email: '',
+            role: 'sales_rep',
+            is_active: true,
+            created_at: '',
+            updated_at: '',
+          })
+        }
+
+        // If current user is Admin, add the admin user to the dropdown options
+        if (isAdmin && currentUser) {
+          const adminRepUser: User = {
+            id: currentUser.id,
+            full_name: currentUser.full_name,
+            email: currentUser.email,
+            role: currentUser.role,
+            department: currentUser.department || 'Administration',
+            is_active: true,
+            created_at: currentUser.created_at || new Date().toISOString(),
+            updated_at: currentUser.updated_at || new Date().toISOString(),
+          }
+          if (!reps.some((r) => r.id === currentUser.id)) {
+            reps = [adminRepUser, ...reps]
+          }
+        }
+
+        if (isMounted) {
+          setSalesReps(reps)
+
+          const currentRepName = initialDeal?.sales_rep_name || form.getValues('sales_rep_name') || currentUser?.full_name
+          const currentRepId = initialDeal?.sales_rep_id || initialDeal?.created_by || form.getValues('sales_rep_id') || currentUser?.id
+
+          const matchingRep = reps.find(
+            (r) =>
+              (currentRepId && r.id === currentRepId) ||
+              (currentRepName && r.full_name.toLowerCase() === currentRepName.toLowerCase())
+          )
+
+          if (matchingRep) {
+            setSelectedRepId(matchingRep.id)
+            form.setValue('sales_rep_id', matchingRep.id)
+            form.setValue('sales_rep_name', matchingRep.full_name)
+            setSalesRepSearch(matchingRep.full_name)
+          } else if (isAdmin && currentUser) {
+            setSelectedRepId(currentUser.id)
+            form.setValue('sales_rep_id', currentUser.id)
+            form.setValue('sales_rep_name', currentUser.full_name)
+            setSalesRepSearch(currentUser.full_name)
+          } else if (reps.length > 0 && !isAdmin) {
+            const myRep = reps.find(
+              (r) => r.id === currentUser?.id || r.full_name.toLowerCase() === currentUser?.full_name?.toLowerCase()
+            )
+            if (myRep) {
+              setSelectedRepId(myRep.id)
+              form.setValue('sales_rep_id', myRep.id)
+              form.setValue('sales_rep_name', myRep.full_name)
+              setSalesRepSearch(myRep.full_name)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load sales reps:', err)
+      } finally {
+        if (isMounted) setIsLoadingReps(false)
+      }
+    }
+    loadReps()
+    return () => {
+      isMounted = false
+    }
+  }, [initialDeal, currentUser, isAdmin])
 
   useEffect(() => {
     const loadQuotes = async () => {
@@ -182,6 +285,7 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
       title: initialDeal?.title ?? '',
       customer_name: initialDeal?.customer_name ?? '',
       sales_rep_name: initialDeal?.sales_rep_name ?? initialDeal?.creator?.full_name ?? currentUser?.full_name ?? '',
+      sales_rep_id: initialDeal?.sales_rep_id ?? initialDeal?.created_by ?? initialDeal?.creator?.id ?? currentUser?.id ?? '',
       date_str: defaultDateStr,
       currency: initialDeal?.currency ?? 'INR', // Use initial deal currency or default to Indian Rupee (INR)
       oem: initialDeal?.oem ?? '',
@@ -290,6 +394,22 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
     )
   }, [customerSearch, customers])
 
+  const isSelectedMatch = useMemo(() => {
+    const currentSelected = salesReps.find((r) => r.id === selectedRepId)
+    return !!(currentSelected && currentSelected.full_name.toLowerCase() === salesRepSearch.trim().toLowerCase())
+  }, [salesRepSearch, salesReps, selectedRepId])
+
+  const filteredReps = useMemo(() => {
+    if (!salesRepSearch || !salesRepSearch.trim() || isSelectedMatch) return salesReps
+    const q = salesRepSearch.toLowerCase().trim()
+    return salesReps.filter(
+      (r) =>
+        r.full_name.toLowerCase().includes(q) ||
+        (r.email && r.email.toLowerCase().includes(q)) ||
+        (r.department && r.department.toLowerCase().includes(q))
+    )
+  }, [salesRepSearch, salesReps, isSelectedMatch])
+
   const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({
     control: form.control,
     name: 'items',
@@ -363,11 +483,16 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
       }).catch(e => console.error('Failed to auto-save new customer:', e))
     }
 
+    const finalRepName = data.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep'
+    const matchedRep = salesReps.find((r) => r.full_name.toLowerCase() === finalRepName.toLowerCase())
+    const finalRepId = data.sales_rep_id || matchedRep?.id || selectedRepId || (isAdmin ? currentUser?.id : undefined)
+
     const payload = {
       title: data.title,
       customer_name: data.customer_name,
       customer_id: customerId ?? 'CUST-' + Math.floor(1000 + Math.random() * 9000),
-      sales_rep_name: data.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep',
+      sales_rep_name: finalRepName,
+      sales_rep_id: finalRepId,
       deal_date: data.date_str,
       created_at: data.date_str ? new Date(data.date_str).toISOString() : new Date().toISOString(),
       description: data.title + ' commercial pricing sheet',
@@ -424,11 +549,16 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
       }).catch(e => console.error('Failed to auto-save new customer from draft:', e))
     }
 
+    const finalRepName = values.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep'
+    const matchedRep = salesReps.find((r) => r.full_name.toLowerCase() === finalRepName.toLowerCase())
+    const finalRepId = values.sales_rep_id || matchedRep?.id || selectedRepId || (isAdmin ? currentUser?.id : undefined)
+
     const payload = {
       title: values.title.trim(),
       customer_name: customerName,
       customer_id: customerId ?? 'CUST-' + Math.floor(1000 + Math.random() * 9000),
-      sales_rep_name: values.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep',
+      sales_rep_name: finalRepName,
+      sales_rep_id: finalRepId,
       deal_date: values.date_str || defaultDateStr,
       created_at: values.date_str ? new Date(values.date_str).toISOString() : new Date().toISOString(),
       description: values.title.trim() + ' commercial pricing sheet (Draft)',
@@ -633,15 +763,139 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
             </div>
 
             {/* Row 2 */}
-            <div>
+            <div className="relative">
               <Label className="text-xs font-semibold text-foreground flex items-center gap-1">
                 Sales Rep Name <span className="text-primary font-bold">*</span>
               </Label>
-              <Input
-                {...form.register('sales_rep_name')}
-                placeholder="e.g. Laxman Kamath"
-                className="mt-1.5 bg-background h-12 border-border text-sm focus:ring-1 focus:ring-primary focus:border-primary rounded-lg transition-all"
-              />
+              {isAdmin ? (
+                <div className="relative mt-1.5">
+                  <Input
+                    value={salesRepSearch}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setSalesRepSearch(val)
+                      form.setValue('sales_rep_name', val, { shouldValidate: true })
+                      setShowRepSuggestions(true)
+                      const exact = salesReps.find((r) => r.full_name.toLowerCase() === val.trim().toLowerCase())
+                      if (exact) {
+                        setSelectedRepId(exact.id)
+                        form.setValue('sales_rep_id', exact.id, { shouldValidate: true })
+                      } else {
+                        setSelectedRepId('')
+                        form.setValue('sales_rep_id', '')
+                      }
+                    }}
+                    onFocus={(e) => {
+                      setShowRepSuggestions(true)
+                      e.target.select()
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowRepSuggestions(false)
+                        const current = form.getValues('sales_rep_name')?.trim() || ''
+                        const exact = salesReps.find((r) => r.full_name.toLowerCase() === current.toLowerCase())
+                        if (exact) {
+                          setSelectedRepId(exact.id)
+                          form.setValue('sales_rep_id', exact.id)
+                          form.setValue('sales_rep_name', exact.full_name)
+                          setSalesRepSearch(exact.full_name)
+                        } else if (!current && currentUser) {
+                          setSelectedRepId(currentUser.id)
+                          form.setValue('sales_rep_id', currentUser.id)
+                          form.setValue('sales_rep_name', currentUser.full_name)
+                          setSalesRepSearch(currentUser.full_name)
+                        }
+                      }, 200)
+                    }}
+                    placeholder={isLoadingReps ? "Loading sales reps..." : "Type or select sales rep..."}
+                    className={cn(
+                      "bg-background h-12 pr-10 border-border text-sm focus:ring-1 focus:ring-primary focus:border-primary rounded-lg transition-all w-full",
+                      form.formState.errors.sales_rep_name && "border-destructive focus:ring-destructive"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onMouseDown={(e) => {
+                      e.preventDefault() // Prevents input blur
+                      setShowRepSuggestions((prev) => !prev)
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1"
+                  >
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", showRepSuggestions && "transform rotate-180")} />
+                  </button>
+
+                  <AnimatePresence>
+                    {showRepSuggestions && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="absolute z-50 w-full mt-1 bg-popover text-popover-foreground border border-border rounded-lg shadow-xl max-h-64 overflow-y-auto"
+                      >
+                        {isLoadingReps ? (
+                          <div className="px-3 py-4 text-xs text-muted-foreground italic text-center">
+                            Loading sales reps...
+                          </div>
+                        ) : filteredReps.length > 0 ? (
+                          <div className="py-1">
+                            {filteredReps.map((rep) => {
+                              const isSelected = selectedRepId === rep.id || form.getValues('sales_rep_name') === rep.full_name
+                              const isSelfAdmin = rep.id === currentUser?.id
+                              return (
+                                <button
+                                  key={rep.id}
+                                  type="button"
+                                  className={cn(
+                                    "w-full text-left px-3.5 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center justify-between gap-3 cursor-pointer",
+                                    isSelected && "bg-accent/60 font-medium"
+                                  )}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault() // Prevents input blur
+                                    setSelectedRepId(rep.id)
+                                    form.setValue('sales_rep_name', rep.full_name, { shouldValidate: true })
+                                    form.setValue('sales_rep_id', rep.id, { shouldValidate: true })
+                                    setSalesRepSearch(rep.full_name)
+                                    setShowRepSuggestions(false)
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="flex items-center gap-2 truncate">
+                                      <span className="font-semibold text-foreground text-sm truncate">{rep.full_name}</span>
+                                      {isSelfAdmin && (
+                                        <span className="text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 shrink-0">
+                                          Admin (You)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-[11px] text-muted-foreground font-mono">
+                                      {rep.email || rep.department || (isSelfAdmin ? 'Admin' : 'Sales Rep')}
+                                    </span>
+                                    {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="px-3 py-4 text-xs text-muted-foreground italic text-center">
+                            No matching sales representatives found
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <Input
+                  {...form.register('sales_rep_name')}
+                  placeholder="e.g. Laxman Kamath"
+                  readOnly
+                  className="mt-1.5 bg-muted/40 text-foreground h-12 border-border text-sm rounded-lg cursor-not-allowed"
+                />
+              )}
               {form.formState.errors.sales_rep_name && (
                 <p className="text-[11px] text-destructive mt-1 font-medium">{form.formState.errors.sales_rep_name.message}</p>
               )}
