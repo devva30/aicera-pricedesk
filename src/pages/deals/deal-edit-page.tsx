@@ -37,6 +37,7 @@ export function DealEditPage() {
           const isOwner =
             d.created_by === user.id ||
             d.creator?.id === user.id ||
+            d.sales_rep_id === user.id ||
             (user.full_name && d.sales_rep_name && d.sales_rep_name.toLowerCase() === user.full_name.toLowerCase())
           if (!isOwner && user.role !== 'admin') {
             toast.error('You do not have permission to edit this deal')

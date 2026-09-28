@@ -68,9 +68,11 @@ function filterDealsByRole(deals: Deal[], role: UserRole, userId: string): Deal[
         const creatorEmail = String(d.creator?.email || '').toLowerCase().trim()
         const repName = String(d.sales_rep_name || '').toLowerCase().trim()
         const creatorName = String(d.creator?.full_name || '').toLowerCase().trim()
+        const repId = String(d.sales_rep_id || '').toLowerCase().trim()
 
         return (
           cb === uid ||
+          (repId && repId === uid) ||
           (em && cb === em) ||
           (creatorId && creatorId === uid) ||
           (em && creatorEmail === em) ||
