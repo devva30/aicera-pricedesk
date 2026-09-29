@@ -1461,7 +1461,7 @@ async function transitionDeal(
 
     // Generate notifications dynamically based on target status
     const reviewerName = actorUser?.full_name ?? 'Reviewer'
-    const salesRepId = updated.created_by || 'demo-sales'
+    const salesRepId = updated.sales_rep_id || updated.created_by || 'demo-sales'
 
     if (toStatus === 'pending_technical') {
       appendMockNotification({
@@ -1721,8 +1721,11 @@ async function transitionDeal(
 
   // Generate Firestore notifications dynamically
   const reviewerName = actorUser?.full_name ?? 'Reviewer'
-  const salesRepId = updated.created_by || deal.created_by || ''
-  const salesRepEmail = updated.creator?.email || deal.creator?.email
+  const salesRepId = updated.sales_rep_id || updated.created_by || deal.sales_rep_id || deal.created_by || ''
+  const isSamePerson = updated.sales_rep_name
+    ? updated.sales_rep_name.toLowerCase().trim() === (updated.creator?.full_name || deal.creator?.full_name || '').toLowerCase().trim()
+    : true
+  const salesRepEmail = isSamePerson ? (updated.creator?.email || deal.creator?.email) : undefined
   const salesRepTarget = salesRepId || salesRepEmail || ''
 
   const triggerNotif = async (targetRoleOrUserId: string, title: string, message: string, type: 'approval' | 'status_update' | 'rejection' | 'revision') => {

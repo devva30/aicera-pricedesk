@@ -16,7 +16,8 @@ import { fetchDealAudit, fetchDealById, fetchQuotesByDealId, deleteDeal, deleteQ
 import { ensureDealMargins } from '@/lib/margins'
 import { updateDeal, removeDeal } from '@/store/deals-slice'
 import { Fragment } from 'react'
-import { DEAL_STATUS_LABELS, type Deal, type DealAudit, type DealVersion, type BOMItem } from '@/types'
+import { DEAL_STATUS_LABELS, type Deal, type DealAudit, type DealVersion, type BOMItem, type User as AppUser } from '@/types'
+import { fetchUsers } from '@/services/users-service'
 import { cn, formatCurrency, formatPercent, formatDate, formatRelative, getMarginColor, getValueSizeClass } from '@/lib/utils'
 import { pdf } from '@react-pdf/renderer'
 import { QuotePDFDocument } from '@/components/deals/PDFDocument'
@@ -60,6 +61,7 @@ export function DealDetailPage() {
   const [isSigPadOpen, setIsSigPadOpen] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [usersList, setUsersList] = useState<AppUser[]>([])
 
   const handleDeleteItem = async () => {
     if (!deal) return
@@ -86,7 +88,27 @@ export function DealDetailPage() {
 
   useEffect(() => {
     import('@/services/targets-service').then(m => setSettings(m.fetchSettings())).catch(() => { })
+    fetchUsers().then(setUsersList).catch(() => {})
   }, [])
+
+  const repUser = usersList.find(
+    (u) =>
+      (deal?.sales_rep_id && u.id === deal.sales_rep_id) ||
+      (deal?.sales_rep_name && u.full_name?.toLowerCase().trim() === deal.sales_rep_name.toLowerCase().trim())
+  )
+  const dealOwnerName = deal?.sales_rep_name || repUser?.full_name || deal?.creator?.full_name || 'System'
+  const repEmail = repUser?.email || (
+    deal?.creator?.email && (!deal?.sales_rep_name || deal.sales_rep_name.toLowerCase().trim() === deal.creator?.full_name?.toLowerCase().trim())
+      ? deal.creator.email
+      : ''
+  )
+  const repDisplay = repEmail ? `${dealOwnerName} (${repEmail})` : dealOwnerName
+
+  const isCreatedByDifferent = Boolean(
+    deal?.creator?.full_name &&
+    dealOwnerName &&
+    deal.creator.full_name.toLowerCase().trim() !== dealOwnerName.toLowerCase().trim()
+  )
 
   useEffect(() => {
     if (!id) return
@@ -508,8 +530,8 @@ export function DealDetailPage() {
             <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider flex items-center gap-1">
               <User className="h-3 w-3" /> {isQuoteView ? 'Prepared By' : 'Deal Owner'}
             </p>
-            <p className="font-semibold text-foreground mt-1.5 truncate text-sm">
-              {deal.creator?.full_name ?? 'System'}
+            <p className="font-semibold text-foreground mt-1.5 truncate text-sm" title={dealOwnerName}>
+              {dealOwnerName}
             </p>
           </div>
           <div className="border-r border-border/40 pr-4 min-w-0 overflow-hidden last:border-0">
@@ -663,8 +685,16 @@ export function DealDetailPage() {
                       </div>
                       <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
                         <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Prepared By</span>
-                        <span className="font-semibold text-foreground">{deal.creator?.full_name ?? '—'}</span>
+                        <span className="font-semibold text-foreground">{repDisplay}</span>
                       </div>
+                      {isCreatedByDifferent && (
+                        <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
+                          <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Created By</span>
+                          <span className="font-semibold text-foreground">
+                            {deal.creator?.full_name}{deal.creator?.email ? ` (${deal.creator.email})` : ''}
+                          </span>
+                        </div>
+                      )}
                       <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
                         <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Calculated Margin</span>
                         <span className={cn("font-bold text-sm", getMarginColor(deal.gross_margin_pct))}>
@@ -729,8 +759,16 @@ export function DealDetailPage() {
                       </div>
                       <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
                         <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Deal Owner (Sales Rep)</span>
-                        <span className="font-semibold text-foreground">{deal.sales_rep_name || deal.creator?.full_name || 'N/A'}{deal.creator?.email ? ` (${deal.creator.email})` : ''}</span>
+                        <span className="font-semibold text-foreground">{repDisplay}</span>
                       </div>
+                      {isCreatedByDifferent && (
+                        <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
+                          <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Created By</span>
+                          <span className="font-semibold text-foreground">
+                            {deal.creator?.full_name}{deal.creator?.email ? ` (${deal.creator.email})` : ''}
+                          </span>
+                        </div>
+                      )}
                       <div className="border-b border-border/30 pb-2.5 flex justify-between items-center gap-4">
                         <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Assigned Reviewer</span>
                         <span className="font-semibold text-foreground">{deal.assigned_to ? 'Assigned' : 'General Queue'}</span>
@@ -1404,7 +1442,7 @@ export function DealDetailPage() {
                 <span className="font-bold text-indigo-900 uppercase tracking-wide text-[10px]">Quote Parameters</span>
                 <div className="text-muted-foreground leading-normal mt-1">
                   <p>Currency: <span className="text-black font-semibold font-mono">{deal.currency}</span></p>
-                  <p>Owner: <span className="text-black font-medium">{deal.creator?.full_name ?? 'System'}</span></p>
+                  <p>Owner: <span className="text-black font-medium">{dealOwnerName}</span></p>
                 </div>
               </div>
             </div>

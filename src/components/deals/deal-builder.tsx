@@ -484,8 +484,11 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
     }
 
     const finalRepName = data.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep'
-    const matchedRep = salesReps.find((r) => r.full_name.toLowerCase() === finalRepName.toLowerCase())
-    const finalRepId = data.sales_rep_id || matchedRep?.id || selectedRepId || (isAdmin ? currentUser?.id : undefined)
+    const trimmedRepName = finalRepName.toLowerCase()
+    const matchedRep = salesReps.find((r) => r.full_name.toLowerCase().trim() === trimmedRepName)
+      || salesReps.find((r) => r.full_name.toLowerCase().includes(trimmedRepName) || trimmedRepName.includes(r.full_name.toLowerCase()))
+    const isCurrentUserTheRep = currentUser?.full_name && trimmedRepName === currentUser.full_name.toLowerCase().trim()
+    const finalRepId = data.sales_rep_id || matchedRep?.id || (isCurrentUserTheRep ? currentUser?.id : undefined)
 
     const payload = {
       title: data.title,
@@ -550,8 +553,11 @@ export function DealBuilder({ initialDeal, onSubmit, isSubmitting }: DealBuilder
     }
 
     const finalRepName = values.sales_rep_name?.trim() || currentUser?.full_name || 'Sales Rep'
-    const matchedRep = salesReps.find((r) => r.full_name.toLowerCase() === finalRepName.toLowerCase())
-    const finalRepId = values.sales_rep_id || matchedRep?.id || selectedRepId || (isAdmin ? currentUser?.id : undefined)
+    const trimmedRepName = finalRepName.toLowerCase()
+    const matchedRep = salesReps.find((r) => r.full_name.toLowerCase().trim() === trimmedRepName)
+      || salesReps.find((r) => r.full_name.toLowerCase().includes(trimmedRepName) || trimmedRepName.includes(r.full_name.toLowerCase()))
+    const isCurrentUserTheRep = currentUser?.full_name && trimmedRepName === currentUser.full_name.toLowerCase().trim()
+    const finalRepId = values.sales_rep_id || matchedRep?.id || (isCurrentUserTheRep ? currentUser?.id : undefined)
 
     const payload = {
       title: values.title.trim(),
